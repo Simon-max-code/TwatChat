@@ -1,251 +1,245 @@
 /* ============================================================
    TwatChat — script.js
    All frontend logic: data, rendering, interactions
+   Group chat support fully integrated
    ============================================================ */
 
 'use strict';
 
 // ============================================================
-// DUMMY DATA
+// DUMMY DATA — USERS
 // ============================================================
 
-const currentUser = "user1";
-
-const users = [
-  { id: "user1", name: "You", avatarClass: "av-0" },
-  { id: "user2", name: "Alice", avatarClass: "av-1" },
-  { id: "user3", name: "Bob", avatarClass: "av-2" },
-  { id: "user4", name: "Charlie", avatarClass: "av-3" },
-  { id: "user5", name: "Diana", avatarClass: "av-4" }
-];
-
-const chats = [
+const USERS = [
   {
-    id: "chat1",
-    type: "private",
-    participants: ["user1", "user2"],
+    id: 1,
+    name: 'Golden Amu',
+    usertag: '@goldenamu',
+    initials: 'GA',
+    avatarClass: 'av-0',
+    online: true,
+    unread: 3,
+    lastTime: '10:42',
     messages: [
-      { sender: "user2", content: "Hey! How's it going?", timestamp: Date.now() - 3600000 },
-      { sender: "user1", content: "Good! Working on some new features.", timestamp: Date.now() - 3500000 },
-      { sender: "user2", content: "Nice! What kind of features?", timestamp: Date.now() - 3400000 }
-    ]
+      { from: 'them', text: 'Hey! Did you check out the new design system?', time: '10:30' },
+      { from: 'me',   text: 'Yeah, it\'s looking really clean. Love the token structure.', time: '10:31' },
+      { from: 'them', text: 'Right? The dark mode tokens are 🔥', time: '10:33' },
+      { from: 'me',   text: 'Sent you the PR link — can you review when you get a chance?', time: '10:35' },
+      { from: 'them', text: 'On it. Give me 20 minutes.', time: '10:36' },
+      { from: 'them', text: 'Also quick question — are we using Syne for the headings?', time: '10:41' },
+      { from: 'them', text: 'Need to update the Figma file if so', time: '10:42' },
+    ],
   },
   {
-    id: "chat2",
-    type: "group",
-    name: "Project Team",
-    participants: ["user1", "user2", "user3"],
+    id: 2,
+    name: 'Omni Amu',
+    usertag: '@omniamu',
+    initials: 'OA',
+    avatarClass: 'av-1',
+    online: true,
+    unread: 1,
+    lastTime: '09:58',
     messages: [
-      { sender: "user2", content: "Team meeting at 3 PM today", timestamp: Date.now() - 7200000 },
-      { sender: "user3", content: "Got it, I'll be there", timestamp: Date.now() - 7100000 },
-      { sender: "user1", content: "See you all then!", timestamp: Date.now() - 7000000 }
-    ]
-  }
+      { from: 'me',   text: 'Hey, you joining the standup?', time: '09:45' },
+      { from: 'them', text: 'Already in. You\'re late 😂', time: '09:46' },
+      { from: 'me',   text: 'lmaooo two minutes doesn\'t count', time: '09:47' },
+      { from: 'them', text: 'The CI pipeline broke again btw', time: '09:55' },
+      { from: 'me',   text: 'Of course it did. Same env issue?', time: '09:56' },
+      { from: 'them', text: 'Nah, looks like the Docker image cache got wiped', time: '09:58' },
+    ],
+  },
+  {
+    id: 3,
+    name: 'Brutally Gay',
+    usertag: '@brutallygay',
+    initials: 'BG',
+    avatarClass: 'av-2',
+    online: false,
+    unread: 0,
+    lastTime: 'Yesterday',
+    messages: [
+      { from: 'them', text: 'Can you send me the wireframes when ready?', time: 'Yesterday' },
+      { from: 'me',   text: 'Just exported them — check your email!', time: 'Yesterday' },
+      { from: 'them', text: 'Got them, thanks! These look amazing 😍', time: 'Yesterday' },
+      { from: 'me',   text: 'Glad you like it! Let me know if anything needs tweaking.', time: 'Yesterday' },
+      { from: 'them', text: 'The hero section might need a bit more breathing room but otherwise perfect', time: 'Yesterday' },
+    ],
+  },
+  {
+    id: 4,
+    name: 'Aunty Linda',
+    usertag: '@auntylinda',
+    initials: 'AL',
+    avatarClass: 'av-3',
+    online: true,
+    unread: 7,
+    lastTime: '11:05',
+    messages: [
+      { from: 'them', text: 'The client wants a demo by Friday 😬', time: '11:00' },
+      { from: 'me',   text: 'That\'s in 3 days... what\'s the scope?', time: '11:01' },
+      { from: 'them', text: 'Login flow, dashboard overview, and the reporting module', time: '11:02' },
+      { from: 'them', text: 'Basically the whole thing lol', time: '11:02' },
+      { from: 'me',   text: 'Ok let\'s triage — what\'s the MVP of the MVP?', time: '11:03' },
+      { from: 'them', text: 'Dashboard is the must-have. Rest can be mocked.', time: '11:04' },
+      { from: 'them', text: 'Let\'s hop on a call?', time: '11:05' },
+    ],
+  },
+  {
+    id: 5,
+    name: 'Evil Spawn',
+    usertag: '@evilspawn',
+    initials: 'ES',
+    avatarClass: 'av-4',
+    online: false,
+    unread: 0,
+    lastTime: 'Mon',
+    messages: [
+      { from: 'me',   text: 'Did the deployment go through?', time: 'Mon' },
+      { from: 'them', text: 'Yep! Prod is green 🟢', time: 'Mon' },
+      { from: 'me',   text: 'Smooth! Great work on the migration script.', time: 'Mon' },
+      { from: 'them', text: 'Thanks! Couldn\'t have done it without the runbook you wrote', time: 'Mon' },
+      { from: 'me',   text: 'Teamwork makes the dream work 🙌', time: 'Mon' },
+    ],
+  },
+  {
+    id: 6,
+    name: 'Sirsimon',
+    usertag: '@sirsimon',
+    initials: 'Ss',
+    avatarClass: 'av-5',
+    online: true,
+    unread: 2,
+    lastTime: '08:30',
+    messages: [
+      { from: 'them', text: 'Morning! Coffee first, then code ☕', time: '08:15' },
+      { from: 'me',   text: 'Always. What are you working on today?', time: '08:17' },
+      { from: 'them', text: 'Finally tackling that auth refactor. Wish me luck.', time: '08:20' },
+      { from: 'me',   text: 'You\'ve got this. The old code was... character-building.', time: '08:22' },
+      { from: 'them', text: 'Haha "character-building" is generous', time: '08:25' },
+      { from: 'them', text: 'Hey can you review the new token refresh logic later?', time: '08:30' },
+    ],
+  },
+];
+
+// ============================================================
+// DUMMY DATA — GROUPS
+// ============================================================
+
+let groupIdCounter = 100;
+
+const GROUPS = [
+  {
+    id: 101,
+    type: 'group',
+    name: 'Design Squad',
+    icon: '🎨',
+    memberIds: [1, 2, 3],
+    unread: 4,
+    lastTime: '11:20',
+    messages: [
+      { senderId: 1, senderName: 'Golden Amu', text: 'Morning team! Ready for the design review?', time: '09:00' },
+      { senderId: 2, senderName: 'Omni Amu',   text: 'Let\'s go! I have my slides ready.', time: '09:02' },
+      { senderId: 'me', senderName: 'You',     text: 'Same. Sharing screen in 2 mins', time: '09:03' },
+      { senderId: 3, senderName: 'Brutally Gay', text: 'The new button system looks incredible btw', time: '11:15' },
+      { senderId: 1, senderName: 'Golden Amu', text: 'Right?! The hover states finally feel alive', time: '11:18' },
+      { senderId: 2, senderName: 'Omni Amu',   text: 'Can we ship this week or do we need another review cycle?', time: '11:20' },
+    ],
+  },
+  {
+    id: 102,
+    type: 'group',
+    name: 'Backend Nerds',
+    icon: '⚡',
+    memberIds: [2, 5, 6],
+    unread: 1,
+    lastTime: '10:05',
+    messages: [
+      { senderId: 5, senderName: 'Evil Spawn',  text: 'Prod deployment done. Zero issues 🎉', time: '09:50' },
+      { senderId: 'me', senderName: 'You',      text: 'Incredible. Who reviewed the DB migration?', time: '09:52' },
+      { senderId: 6, senderName: 'Sirsimon',    text: 'I did, ran it against staging twice', time: '09:55' },
+      { senderId: 2, senderName: 'Omni Amu',    text: 'The cache TTL change made a huge diff on latency', time: '10:05' },
+    ],
+  },
+  {
+    id: 103,
+    type: 'group',
+    name: 'The Chaos Crew',
+    icon: '🔥',
+    memberIds: [1, 3, 4, 6],
+    unread: 0,
+    lastTime: 'Yesterday',
+    messages: [
+      { senderId: 4, senderName: 'Aunty Linda', text: 'GUYS. The client just moved the deadline to MONDAY', time: 'Yesterday' },
+      { senderId: 1, senderName: 'Golden Amu',  text: '😭😭😭', time: 'Yesterday' },
+      { senderId: 3, senderName: 'Brutally Gay', text: 'I\'m crying', time: 'Yesterday' },
+      { senderId: 'me', senderName: 'You',      text: 'Ok everyone breathe. We\'ve done worse before.', time: 'Yesterday' },
+      { senderId: 6, senderName: 'Sirsimon',    text: 'True. We shipped the whole dashboard in a weekend once', time: 'Yesterday' },
+      { senderId: 4, senderName: 'Aunty Linda', text: 'Fine. Let\'s do it. Calling an emergency session at 6pm', time: 'Yesterday' },
+    ],
+  },
 ];
 
 // ============================================================
 // STATE
 // ============================================================
 
-let activeChatId = null;   // ID of currently open chat
-let typingTimer   = null;  // Timeout reference for typing simulation
+let activeUserId   = null;   // ID of currently open DM
+let activeGroupId  = null;   // ID of currently open group
+let activeSidebarTab = 'dms'; // 'dms' | 'groups'
+let typingTimer    = null;
+let selectedGroupIcon = '🚀';
+let selectedMemberIds = new Set();
 
 // ============================================================
 // DOM REFS
 // ============================================================
 
-const chatListEl      = document.getElementById('chatList');
-const searchInput     = document.getElementById('searchInput');
-const emptyState      = document.getElementById('emptyState');
-const activeChat      = document.getElementById('activeChat');
-const messagesArea    = document.getElementById('messagesArea');
-const chatHeaderAvatar= document.getElementById('chatHeaderAvatar');
-const chatHeaderName  = document.getElementById('chatHeaderName');
-const chatHeaderStatus= document.getElementById('chatHeaderStatus');
-const typingIndicator = document.getElementById('typingIndicator');
-const typingName      = document.getElementById('typingName');
-const msgInput        = document.getElementById('msgInput');
-const sendBtn         = document.getElementById('sendBtn');
-const backBtn         = document.getElementById('backBtn');
-const sidebar         = document.getElementById('sidebar');
-const navTabs         = document.querySelectorAll('.nav-tab');
-const createGroupBtn  = document.getElementById('createGroupBtn');
-const createGroupModal= document.getElementById('createGroupModal');
-const groupNameInput  = document.getElementById('groupNameInput');
-const membersList     = document.getElementById('membersList');
-const cancelGroupBtn  = document.getElementById('cancelGroupBtn');
-const createGroupSubmitBtn = document.getElementById('createGroupSubmitBtn');
+const chatListEl       = document.getElementById('chatList');
+const groupListEl      = document.getElementById('groupList');
+const searchInput      = document.getElementById('searchInput');
+const emptyState       = document.getElementById('emptyState');
+const activeChat       = document.getElementById('activeChat');
+const messagesArea     = document.getElementById('messagesArea');
+const chatHeaderAvatar = document.getElementById('chatHeaderAvatar');
+const chatHeaderGroupAvatar = document.getElementById('chatHeaderGroupAvatar');
+const chatHeaderGroupAvatarInner = document.getElementById('chatHeaderGroupAvatarInner');
+const chatHeaderName   = document.getElementById('chatHeaderName');
+const chatHeaderStatus = document.getElementById('chatHeaderStatus');
+const typingIndicator  = document.getElementById('typingIndicator');
+const typingName       = document.getElementById('typingName');
+const msgInput         = document.getElementById('msgInput');
+const sendBtn          = document.getElementById('sendBtn');
+const backBtn          = document.getElementById('backBtn');
+const sidebar          = document.getElementById('sidebar');
+const navTabs          = document.querySelectorAll('.nav-tab');
+const groupInfoBtn     = document.getElementById('groupInfoBtn');
+
+// Sidebar tabs
+const tabDMs     = document.getElementById('tabDMs');
+const tabGroups  = document.getElementById('tabGroups');
+const newGroupBtn = document.getElementById('newGroupBtn');
 
 // ============================================================
 // HELPERS
 // ============================================================
 
-/** Returns formatted time string (HH:MM) */
 function now() {
   const d = new Date();
   return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
 }
 
-/** Scroll the messages area to the bottom */
 function scrollToBottom(smooth = true) {
-  messagesArea.scrollTo({
-    top: messagesArea.scrollHeight,
-    behavior: smooth ? 'smooth' : 'instant',
-  });
+  messagesArea.scrollTo({ top: messagesArea.scrollHeight, behavior: smooth ? 'smooth' : 'instant' });
 }
 
-/** Get user by ID */
 function getUserById(id) {
-  return users.find(u => u.id === id);
+  return USERS.find(u => u.id === id);
 }
 
-/** Get chat by ID */
-function getChatById(id) {
-  return chats.find(c => c.id === id);
+function getGroupById(id) {
+  return GROUPS.find(g => g.id === id);
 }
 
-/** Get the other participant in a private chat */
-function getOtherParticipant(chat) {
-  return chat.participants.find(p => p !== currentUser);
-}
-
-/** Get display name for a chat */
-function getChatDisplayName(chat) {
-  if (chat.type === 'group') {
-    return chat.name;
-  } else {
-    const otherUser = getUserById(getOtherParticipant(chat));
-    return otherUser ? otherUser.name : 'Unknown';
-  }
-}
-
-/** Get avatar class for a chat */
-function getChatAvatarClass(chat) {
-  if (chat.type === 'group') {
-    return 'av-0'; // Default group avatar
-  } else {
-    const otherUser = getUserById(getOtherParticipant(chat));
-    return otherUser ? otherUser.avatarClass : 'av-0';
-  }
-}
-
-// ============================================================
-// RENDER: SIDEBAR CHAT LIST
-// ============================================================
-
-function renderChatList(filter = '') {
-  chatListEl.innerHTML = '';
-  const lower = filter.toLowerCase();
-
-  const filtered = chats.filter(chat => {
-    const displayName = getChatDisplayName(chat).toLowerCase();
-    return displayName.includes(lower);
-  });
-
-  if (!filtered.length) {
-    chatListEl.innerHTML = `<p style="text-align:center;color:var(--text-muted);padding:20px;font-size:13px;">No chats found</p>`;
-    return;
-  }
-
-  filtered.forEach(chat => {
-    const lastMsg = chat.messages[chat.messages.length - 1];
-    const preview = lastMsg ? lastMsg.content : 'No messages yet';
-    const displayName = getChatDisplayName(chat);
-    const avatarClass = getChatAvatarClass(chat);
-    const initials = chat.type === 'group' ? displayName.substring(0, 2).toUpperCase() : getUserById(getOtherParticipant(chat)).name.split(' ').map(n => n[0]).join('');
-
-    const item = document.createElement('div');
-    item.className = 'chat-item' + (chat.id === activeChatId ? ' active' : '');
-    item.dataset.id = chat.id;
-
-    item.innerHTML = `
-      <div class="ci-avatar-wrap">
-        <div class="ci-avatar ${avatarClass}">${initials}</div>
-      </div>
-      <div class="ci-content">
-        <div class="ci-top">
-          <span class="ci-name">${displayName}</span>
-          <span class="ci-time">${lastMsg ? new Date(lastMsg.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : ''}</span>
-        </div>
-        <div class="ci-bottom">
-          <span class="ci-preview">${preview}</span>
-        </div>
-      </div>
-    `;
-
-    item.addEventListener('click', () => openChat(chat.id));
-    chatListEl.appendChild(item);
-  });
-}
-
-// ============================================================
-// RENDER: MESSAGES
-// ============================================================
-
-function renderMessages(chat) {
-  messagesArea.innerHTML = '';
-
-  // Date divider at top
-  const divider = document.createElement('div');
-  divider.className = 'date-divider';
-  divider.innerHTML = '<span>Today</span>';
-  messagesArea.appendChild(divider);
-
-  let prevSender = null;
-
-  chat.messages.forEach((msg, idx) => {
-    const isGap = prevSender !== msg.sender && idx > 0;
-    renderBubble(msg, chat, isGap, false);
-    prevSender = msg.sender;
-  });
-
-  scrollToBottom(false);
-}
-
-/**
- * Render a single message bubble into the messages area.
- * @param {object} msg    - { sender, content, timestamp }
- * @param {object} chat   - the chat object
- * @param {boolean} gap   - add gap-above spacing
- * @param {boolean} smooth - smooth scroll
- */
-function renderBubble(msg, chat, gap = false, smooth = true) {
-  const isSent = msg.sender === currentUser;
-  const sender = getUserById(msg.sender);
-  const senderName = sender ? sender.name : 'Unknown';
-
-  const div = document.createElement('div');
-  div.className = `message ${isSent ? 'sent' : 'received'}${gap ? ' gap-above' : ''}`;
-
-  // Avatar (only shown on received messages; hidden for consecutive)
-  const avatarHidden = !gap && !isSent && messagesArea.lastElementChild?.classList.contains('message');
-  const avatarClass = sender ? sender.avatarClass : 'av-0';
-  const initials = sender ? sender.name.split(' ').map(n => n[0]).join('') : 'U';
-
-  let avatarHtml = '';
-  if (!isSent) {
-    avatarHtml = `<div class="msg-avatar ${avatarClass} ${!gap ? 'hidden-avatar' : ''}">${initials}</div>`;
-  }
-
-  let senderNameHtml = '';
-  if (chat.type === 'group' && !isSent && gap) {
-    senderNameHtml = `<div class="msg-sender">${senderName}</div>`;
-  }
-
-  div.innerHTML = `
-    ${avatarHtml}
-    <div class="msg-body">
-      ${senderNameHtml}
-      <div class="msg-bubble">${escapeHTML(msg.content)}</div>
-      <span class="msg-time">${new Date(msg.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
-    </div>
-  `;
-
-  messagesArea.appendChild(div);
-  if (smooth) scrollToBottom(true);
-}
-
-/** Basic HTML escaping to prevent XSS */
 function escapeHTML(str) {
   return str
     .replace(/&/g,'&amp;')
@@ -255,53 +249,297 @@ function escapeHTML(str) {
 }
 
 // ============================================================
-// OPEN CHAT
+// SIDEBAR TABS
 // ============================================================
 
-function openChat(chatId) {
-  const chat = getChatById(chatId);
-  if (!chat) return;
+function switchSidebarTab(tab) {
+  activeSidebarTab = tab;
+  tabDMs.classList.toggle('active', tab === 'dms');
+  tabGroups.classList.toggle('active', tab === 'groups');
+  chatListEl.classList.toggle('hidden', tab !== 'dms');
+  groupListEl.classList.toggle('hidden', tab !== 'groups');
+  newGroupBtn.style.opacity = tab === 'groups' ? '1' : '0.4';
+  newGroupBtn.style.pointerEvents = tab === 'groups' ? 'all' : 'none';
+}
 
-  // Clear previous typing timer
+tabDMs.addEventListener('click', () => switchSidebarTab('dms'));
+tabGroups.addEventListener('click', () => switchSidebarTab('groups'));
+
+// ============================================================
+// RENDER: DM CHAT LIST
+// ============================================================
+
+function renderChatList(filter = '') {
+  chatListEl.innerHTML = '';
+  const lower = filter.toLowerCase();
+  const filtered = USERS.filter(u => u.name.toLowerCase().includes(lower));
+
+  if (!filtered.length) {
+    chatListEl.innerHTML = `<p style="text-align:center;color:var(--text-muted);padding:20px;font-size:13px;">No chats found</p>`;
+    return;
+  }
+
+  filtered.forEach(user => {
+    const lastMsg = user.messages[user.messages.length - 1];
+    const preview = lastMsg ? lastMsg.text : 'No messages yet';
+    const item = document.createElement('div');
+    item.className = 'chat-item' + (user.id === activeUserId ? ' active' : '');
+    item.dataset.id = user.id;
+    item.innerHTML = `
+      <div class="ci-avatar-wrap">
+        <div class="ci-avatar ${user.avatarClass}">${user.initials}</div>
+        <span class="ci-status ${user.online ? 'online' : 'offline'}"></span>
+      </div>
+      <div class="ci-content">
+        <div class="ci-top">
+          <span class="ci-name">${user.name}</span>
+          <span class="ci-time">${user.lastTime}</span>
+        </div>
+        <div class="ci-bottom">
+          <span class="ci-preview">${preview}</span>
+          ${user.unread > 0 ? `<span class="ci-badge">${user.unread}</span>` : ''}
+        </div>
+      </div>
+    `;
+    item.addEventListener('click', () => openChat(user.id));
+    chatListEl.appendChild(item);
+  });
+}
+
+// ============================================================
+// RENDER: GROUP LIST
+// ============================================================
+
+function renderGroupList(filter = '') {
+  groupListEl.innerHTML = '';
+  const lower = filter.toLowerCase();
+  const filtered = GROUPS.filter(g => g.name.toLowerCase().includes(lower));
+
+  if (!filtered.length) {
+    groupListEl.innerHTML = `<p style="text-align:center;color:var(--text-muted);padding:20px;font-size:13px;">No groups yet</p>`;
+    return;
+  }
+
+  filtered.forEach(group => {
+    const lastMsg = group.messages[group.messages.length - 1];
+    const preview = lastMsg ? `${lastMsg.senderId === 'me' ? 'You' : lastMsg.senderName.split(' ')[0]}: ${lastMsg.text}` : 'No messages yet';
+    const memberAvatars = buildGroupAvatarMini(group, 'sm');
+
+    const item = document.createElement('div');
+    item.className = 'chat-item group-chat-item' + (group.id === activeGroupId ? ' active' : '');
+    item.dataset.gid = group.id;
+    item.innerHTML = `
+      <div class="ci-avatar-wrap">
+        <div class="group-avatar-stack sm">${memberAvatars}</div>
+        <span class="group-icon-badge">${group.icon}</span>
+      </div>
+      <div class="ci-content">
+        <div class="ci-top">
+          <span class="ci-name">${escapeHTML(group.name)}</span>
+          <span class="ci-time">${group.lastTime}</span>
+        </div>
+        <div class="ci-bottom">
+          <span class="ci-preview">${escapeHTML(preview)}</span>
+          ${group.unread > 0 ? `<span class="ci-badge">${group.unread}</span>` : ''}
+        </div>
+      </div>
+    `;
+    item.addEventListener('click', () => openGroupChat(group.id));
+    groupListEl.appendChild(item);
+  });
+}
+
+// Build the stacked avatar HTML for a group
+function buildGroupAvatarMini(group, size = 'sm') {
+  const members = group.memberIds.slice(0, 3).map(id => getUserById(id)).filter(Boolean);
+  return members.map((u, i) =>
+    `<div class="gam-avatar ${u.avatarClass}" style="z-index:${3-i}">${u.initials}</div>`
+  ).join('');
+}
+
+// ============================================================
+// OPEN DM CHAT
+// ============================================================
+
+function openChat(userId) {
+  const user = getUserById(userId);
+  if (!user) return;
+
   clearTimeout(typingTimer);
   typingIndicator.classList.add('hidden');
 
-  activeChatId = chatId;
+  activeUserId  = userId;
+  activeGroupId = null;
 
-  // Update sidebar active state
+  user.unread = 0;
+
   renderChatList(searchInput.value);
 
-  // Update chat header
-  const displayName = getChatDisplayName(chat);
-  const avatarClass = getChatAvatarClass(chat);
-  const initials = chat.type === 'group' ? displayName.substring(0, 2).toUpperCase() : getUserById(getOtherParticipant(chat)).name.split(' ').map(n => n[0]).join('');
+  // Header — DM mode
+  chatHeaderAvatar.className = `chat-header-avatar ${user.avatarClass}`;
+  chatHeaderAvatar.textContent = user.initials;
+  chatHeaderAvatar.classList.remove('hidden');
+  chatHeaderGroupAvatar.classList.add('hidden');
 
-  chatHeaderAvatar.className = `chat-header-avatar ${avatarClass}`;
-  chatHeaderAvatar.textContent = initials;
-  chatHeaderName.textContent = displayName;
+  chatHeaderName.textContent = user.name;
+  chatHeaderStatus.textContent = user.online ? '● Online' : '● Offline';
+  chatHeaderStatus.className = 'chat-header-status' + (user.online ? ' is-online' : '');
 
-  if (chat.type === 'group') {
-    const participantCount = chat.participants.length;
-    chatHeaderStatus.textContent = `${participantCount} members`;
-    chatHeaderStatus.className = 'chat-header-status';
-  } else {
-    const otherUser = getUserById(getOtherParticipant(chat));
-    chatHeaderStatus.textContent = otherUser ? 'Online' : 'Offline';
-    chatHeaderStatus.className = 'chat-header-status' + (otherUser ? ' is-online' : '');
-  }
+  groupInfoBtn.classList.add('hidden');
 
-  // Show chat, hide empty state
   emptyState.classList.add('hidden');
   activeChat.classList.remove('hidden');
 
-  // Render messages
-  renderMessages(chat);
+  renderMessages(user);
 
-  // On mobile: slide sidebar away
   sidebar.classList.add('hidden-mobile');
 
-  // Focus input
+  if (user.online) scheduleFakeReply(user);
+
   msgInput.focus();
+}
+
+// ============================================================
+// OPEN GROUP CHAT
+// ============================================================
+
+function openGroupChat(groupId) {
+  const group = getGroupById(groupId);
+  if (!group) return;
+
+  clearTimeout(typingTimer);
+  typingIndicator.classList.add('hidden');
+
+  activeGroupId = groupId;
+  activeUserId  = null;
+
+  group.unread = 0;
+
+  renderGroupList(searchInput.value);
+
+  // Header — Group mode
+  chatHeaderAvatar.classList.add('hidden');
+  chatHeaderGroupAvatar.classList.remove('hidden');
+  chatHeaderGroupAvatarInner.innerHTML = buildGroupAvatarMini(group, 'hdr');
+  chatHeaderGroupAvatarInner.className = 'group-avatar-stack hdr';
+
+  chatHeaderName.textContent = `${group.icon} ${group.name}`;
+  const memberCount = group.memberIds.length + 1; // +1 for "you"
+  chatHeaderStatus.textContent = `${memberCount} members`;
+  chatHeaderStatus.className = 'chat-header-status';
+
+  groupInfoBtn.classList.remove('hidden');
+
+  emptyState.classList.add('hidden');
+  activeChat.classList.remove('hidden');
+
+  renderGroupMessages(group);
+
+  sidebar.classList.add('hidden-mobile');
+
+  // Simulate a random group member typing after a while
+  scheduleGroupFakeReply(group);
+
+  msgInput.focus();
+}
+
+// ============================================================
+// RENDER DM MESSAGES
+// ============================================================
+
+function renderMessages(user) {
+  messagesArea.innerHTML = '';
+  const divider = document.createElement('div');
+  divider.className = 'date-divider';
+  divider.innerHTML = '<span>Today</span>';
+  messagesArea.appendChild(divider);
+
+  let prevFrom = null;
+  user.messages.forEach((msg, idx) => {
+    const isGap = prevFrom !== msg.from && idx > 0;
+    renderBubble(msg, user, isGap, false);
+    prevFrom = msg.from;
+  });
+  scrollToBottom(false);
+}
+
+function renderBubble(msg, user, gap = false, smooth = true) {
+  const isSent = msg.from === 'me';
+  const div = document.createElement('div');
+  div.className = `message ${isSent ? 'sent' : 'received'}${gap ? ' gap-above' : ''}`;
+  div.innerHTML = `
+    <div class="msg-avatar ${isSent ? 'av-0' : user.avatarClass} ${!isSent && !gap ? 'hidden-avatar' : ''}">
+      ${isSent ? 'Y' : user.initials}
+    </div>
+    <div class="msg-body">
+      <div class="msg-bubble">${escapeHTML(msg.text)}</div>
+      <span class="msg-time">${msg.time}</span>
+    </div>
+  `;
+  messagesArea.appendChild(div);
+  if (smooth) scrollToBottom(true);
+}
+
+// ============================================================
+// RENDER GROUP MESSAGES
+// ============================================================
+
+function renderGroupMessages(group) {
+  messagesArea.innerHTML = '';
+  const divider = document.createElement('div');
+  divider.className = 'date-divider';
+  divider.innerHTML = '<span>Today</span>';
+  messagesArea.appendChild(divider);
+
+  let prevSender = null;
+  group.messages.forEach((msg, idx) => {
+    const isGap = prevSender !== msg.senderId && idx > 0;
+    renderGroupBubble(msg, group, isGap, false);
+    prevSender = msg.senderId;
+  });
+  scrollToBottom(false);
+}
+
+function renderGroupBubble(msg, group, gap = false, smooth = true) {
+  const isSent = msg.senderId === 'me';
+  const sender = isSent ? null : getUserById(msg.senderId);
+
+  const div = document.createElement('div');
+  div.className = `message ${isSent ? 'sent' : 'received'}${gap ? ' gap-above' : ''}`;
+
+  let avatarHTML = '';
+  let senderNameHTML = '';
+
+  if (!isSent) {
+    const avatarClass = sender ? sender.avatarClass : 'av-0';
+    const initials = sender ? sender.initials : msg.senderName.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+    const hidden = !gap ? 'hidden-avatar' : '';
+    avatarHTML = `<div class="msg-avatar ${avatarClass} ${hidden}">${initials}</div>`;
+    if (gap) {
+      senderNameHTML = `<span class="msg-sender-name">${escapeHTML(msg.senderName)}</span>`;
+    }
+  }
+
+  div.innerHTML = `
+    ${avatarHTML}
+    <div class="msg-body">
+      ${senderNameHTML}
+      <div class="msg-bubble">${escapeHTML(msg.text)}</div>
+      <span class="msg-time">${msg.time}</span>
+    </div>
+  `;
+
+  if (!isSent) {
+    const avatarEl = div.querySelector('.msg-avatar:not(.hidden-avatar)');
+    if (avatarEl && sender) {
+      avatarEl.style.cursor = 'pointer';
+      avatarEl.title = sender.name;
+      avatarEl.addEventListener('click', () => openProfileModal(sender));
+    }
+  }
+
+  messagesArea.appendChild(div);
+  if (smooth) scrollToBottom(true);
 }
 
 // ============================================================
@@ -310,33 +548,49 @@ function openChat(chatId) {
 
 function sendMessage() {
   const text = msgInput.value.trim();
-  if (!text || activeChatId === null) return;
+  if (!text) return;
 
-  const chat = getChatById(activeChatId);
-  const msg = { sender: currentUser, content: text, timestamp: Date.now() };
+  if (activeUserId !== null) {
+    sendDMMessage(text);
+  } else if (activeGroupId !== null) {
+    sendGroupMessage(text);
+  }
+}
 
-  // Push to chat's message history
-  chat.messages.push(msg);
+function sendDMMessage(text) {
+  const user = getUserById(activeUserId);
+  const msg = { from: 'me', text, time: now() };
+  user.messages.push(msg);
+  user.lastTime = now();
 
-  // Determine if gap needed (last msg was from different sender)
-  const prevMsg = chat.messages[chat.messages.length - 2];
-  const gap = prevMsg && prevMsg.sender !== currentUser;
+  const prevMsg = user.messages[user.messages.length - 2];
+  const gap = prevMsg && prevMsg.from !== 'me';
 
-  // Render bubble
-  renderBubble(msg, chat, gap, true);
-
-  // Update sidebar preview
+  renderBubble(msg, user, gap, true);
   renderChatList(searchInput.value);
-
-  // Clear input
   msgInput.value = '';
 
-  // Simulate reply
-  scheduleFakeReply(chat);
+  if (user.online) scheduleFakeReply(user);
+}
+
+function sendGroupMessage(text) {
+  const group = getGroupById(activeGroupId);
+  const msg = { senderId: 'me', senderName: 'You', text, time: now() };
+  group.messages.push(msg);
+  group.lastTime = now();
+
+  const prevMsg = group.messages[group.messages.length - 2];
+  const gap = prevMsg && prevMsg.senderId !== 'me';
+
+  renderGroupBubble(msg, group, gap, true);
+  renderGroupList(searchInput.value);
+  msgInput.value = '';
+
+  scheduleGroupFakeReply(group);
 }
 
 // ============================================================
-// FAKE TYPING + AUTO-REPLY SIMULATION
+// FAKE TYPING + AUTO-REPLY — DM
 // ============================================================
 
 const FAKE_REPLIES = [
@@ -357,57 +611,94 @@ const FAKE_REPLIES = [
   "That's exactly what I was thinking.",
 ];
 
-function scheduleFakeReply(chat) {
-  // Only simulate if this chat is actively open
-  if (chat.id !== activeChatId) return;
+const GROUP_REPLIES = [
+  "100% agree with that approach",
+  "Let's ship it 🚀",
+  "Good call, I'll update the doc",
+  "lol same tbh",
+  "Anyone else seeing this issue?",
+  "Just pushed the fix btw",
+  "OK let me check the logs real quick",
+  "This looks way better now",
+  "Can someone review when free?",
+  "Yep that's on me, fixing now",
+  "Ngl this is the best one yet",
+  "Wait what happened to staging??",
+];
 
+function scheduleFakeReply(user) {
+  if (user.id !== activeUserId) return;
   clearTimeout(typingTimer);
 
-  // Pick a random participant (not current user)
-  const availableParticipants = chat.participants.filter(p => p !== currentUser);
-  if (availableParticipants.length === 0) return;
-
-  const randomParticipant = availableParticipants[Math.floor(Math.random() * availableParticipants.length)];
-  const participant = getUserById(randomParticipant);
-
-  // Show typing indicator after a short delay
-  const typingDelay = 1200 + Math.random() * 1400;
-
   typingTimer = setTimeout(() => {
-    if (chat.id !== activeChatId) return;
-
-    // Show typing
-    typingName.textContent = participant ? participant.name.split(' ')[0] : 'Someone';
+    if (user.id !== activeUserId) return;
+    typingName.textContent = user.name.split(' ')[0];
     typingIndicator.classList.remove('hidden');
     scrollToBottom(true);
 
-    // Send reply after typing duration
-    const replyDelay = 1500 + Math.random() * 1500;
     typingTimer = setTimeout(() => {
-      if (chat.id !== activeChatId) return;
-
+      if (user.id !== activeUserId) return;
       typingIndicator.classList.add('hidden');
 
       const replyText = FAKE_REPLIES[Math.floor(Math.random() * FAKE_REPLIES.length)];
-      const replyMsg = { sender: randomParticipant, content: replyText, timestamp: Date.now() };
+      const replyMsg = { from: 'them', text: replyText, time: now() };
+      user.messages.push(replyMsg);
+      user.lastTime = now();
 
-      chat.messages.push(replyMsg);
+      const prevMsg = user.messages[user.messages.length - 2];
+      const gap = prevMsg && prevMsg.from !== 'them';
 
-      const prevMsg = chat.messages[chat.messages.length - 2];
-      const gap = prevMsg && prevMsg.sender !== randomParticipant;
-
-      renderBubble(replyMsg, chat, gap, true);
+      renderBubble(replyMsg, user, gap, true);
       renderChatList(searchInput.value);
+    }, 1500 + Math.random() * 1500);
 
-    }, replyDelay);
+  }, 1200 + Math.random() * 1400);
+}
 
-  }, typingDelay);
+function scheduleGroupFakeReply(group) {
+  if (group.id !== activeGroupId) return;
+  clearTimeout(typingTimer);
+
+  // Pick a random member (not "me")
+  const onlineMembers = group.memberIds.map(id => getUserById(id)).filter(u => u && u.online);
+  if (!onlineMembers.length) return;
+
+  const randomMember = onlineMembers[Math.floor(Math.random() * onlineMembers.length)];
+
+  typingTimer = setTimeout(() => {
+    if (group.id !== activeGroupId) return;
+    typingName.textContent = randomMember.name.split(' ')[0];
+    typingIndicator.classList.remove('hidden');
+    scrollToBottom(true);
+
+    typingTimer = setTimeout(() => {
+      if (group.id !== activeGroupId) return;
+      typingIndicator.classList.add('hidden');
+
+      const replyText = GROUP_REPLIES[Math.floor(Math.random() * GROUP_REPLIES.length)];
+      const replyMsg = {
+        senderId: randomMember.id,
+        senderName: randomMember.name,
+        text: replyText,
+        time: now(),
+      };
+      group.messages.push(replyMsg);
+      group.lastTime = now();
+
+      const prevMsg = group.messages[group.messages.length - 2];
+      const gap = prevMsg && prevMsg.senderId !== randomMember.id;
+
+      renderGroupBubble(replyMsg, group, gap, true);
+      renderGroupList(searchInput.value);
+    }, 1400 + Math.random() * 1600);
+
+  }, 1400 + Math.random() * 1600);
 }
 
 // ============================================================
 // BOTTOM NAV — TAB SWITCHING
 // ============================================================
-// ── NEW ──
+
 function switchTab(targetViewId, clickedTab) {
   navTabs.forEach(t => t.classList.remove('active'));
   clickedTab.classList.add('active');
@@ -416,24 +707,19 @@ function switchTab(targetViewId, clickedTab) {
   const targetView = document.getElementById(targetViewId);
   if (targetView) targetView.classList.add('active');
 
-  // On mobile: if switching AWAY from chats, hide sidebar so the view is reachable
-  // If switching TO chats and no chat is open, show sidebar
   if (window.innerWidth <= 680) {
     if (targetViewId !== 'view-chats') {
       sidebar.classList.add('hidden-mobile');
     } else {
-      // Only restore sidebar if no chat is actively open
-      if (activeChatId === null) {
+      if (activeUserId === null && activeGroupId === null) {
         sidebar.classList.remove('hidden-mobile');
       }
     }
   }
 }
+
 navTabs.forEach(tab => {
-  tab.addEventListener('click', () => {
-    const viewId = tab.dataset.view;
-    switchTab(viewId, tab);
-  });
+  tab.addEventListener('click', () => switchTab(tab.dataset.view, tab));
 });
 
 // ============================================================
@@ -441,7 +727,11 @@ navTabs.forEach(tab => {
 // ============================================================
 
 searchInput.addEventListener('input', () => {
-  renderChatList(searchInput.value);
+  if (activeSidebarTab === 'dms') {
+    renderChatList(searchInput.value);
+  } else {
+    renderGroupList(searchInput.value);
+  }
 });
 
 // ============================================================
@@ -449,7 +739,6 @@ searchInput.addEventListener('input', () => {
 // ============================================================
 
 sendBtn.addEventListener('click', sendMessage);
-
 msgInput.addEventListener('keydown', e => {
   if (e.key === 'Enter' && !e.shiftKey) {
     e.preventDefault();
@@ -458,103 +747,254 @@ msgInput.addEventListener('keydown', e => {
 });
 
 // ============================================================
-// CREATE GROUP
+// BACK BUTTON (mobile)
 // ============================================================
 
-function openCreateGroupModal() {
-  // Reset form
-  groupNameInput.value = '';
-  renderMembersList();
+backBtn.addEventListener('click', () => {
+  sidebar.classList.remove('hidden-mobile');
+  activeUserId  = null;
+  activeGroupId = null;
+  emptyState.classList.remove('hidden');
+  activeChat.classList.add('hidden');
+  clearTimeout(typingTimer);
+  typingIndicator.classList.add('hidden');
+  document.querySelectorAll('.chat-item').forEach(el => el.classList.remove('active'));
+});
 
-  // Show modal
-  createGroupModal.classList.remove('hidden');
-}
+// ============================================================
+// GROUP INFO BUTTON
+// ============================================================
 
-function closeCreateGroupModal() {
-  createGroupModal.classList.add('hidden');
-}
+groupInfoBtn.addEventListener('click', () => {
+  const group = getGroupById(activeGroupId);
+  if (group) openGroupInfoModal(group);
+});
 
-function renderMembersList() {
-  membersList.innerHTML = '';
+// ============================================================
+// NEW GROUP MODAL
+// ============================================================
 
-  users.forEach(user => {
-    if (user.id === currentUser) return; // Don't include current user in selectable list
+const newGroupModal     = document.getElementById('newGroupModal');
+const newGroupName      = document.getElementById('newGroupName');
+const groupIconPicker   = document.getElementById('groupIconPicker');
+const memberSelector    = document.getElementById('memberSelector');
+const selectedMembersEl = document.getElementById('selectedMembers');
+const cancelNewGroupBtn = document.getElementById('cancelNewGroupBtn');
+const createGroupBtn    = document.getElementById('createGroupBtn');
 
-    const item = document.createElement('div');
-    item.className = 'member-item';
+function openNewGroupModal() {
+  newGroupName.value = '';
+  selectedGroupIcon = '🚀';
+  selectedMemberIds = new Set();
 
-    item.innerHTML = `
-      <input type="checkbox" class="member-checkbox" id="member-${user.id}" value="${user.id}">
-      <div class="member-avatar ${user.avatarClass}">${user.name.split(' ').map(n => n[0]).join('')}</div>
-      <label class="member-name" for="member-${user.id}">${user.name}</label>
+  // Reset icon picker
+  groupIconPicker.querySelectorAll('.gip-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.icon === '🚀');
+  });
+
+  // Populate member selector
+  memberSelector.innerHTML = '';
+  USERS.forEach(user => {
+    const chip = document.createElement('button');
+    chip.className = 'member-chip';
+    chip.dataset.uid = user.id;
+    chip.innerHTML = `
+      <div class="mc-avatar ${user.avatarClass}">${user.initials}</div>
+      <span>${user.name.split(' ')[0]}</span>
     `;
+    chip.addEventListener('click', () => toggleMember(user.id, chip));
+    memberSelector.appendChild(chip);
+  });
 
-    membersList.appendChild(item);
+  renderSelectedMembers();
+  newGroupModal.classList.remove('hidden');
+  setTimeout(() => newGroupName.focus(), 100);
+}
+
+function closeNewGroupModal() {
+  newGroupModal.classList.add('hidden');
+}
+
+function toggleMember(uid, chipEl) {
+  if (selectedMemberIds.has(uid)) {
+    selectedMemberIds.delete(uid);
+    chipEl.classList.remove('selected');
+  } else {
+    selectedMemberIds.add(uid);
+    chipEl.classList.add('selected');
+  }
+  renderSelectedMembers();
+}
+
+function renderSelectedMembers() {
+  selectedMembersEl.innerHTML = '';
+  selectedMemberIds.forEach(uid => {
+    const user = getUserById(uid);
+    if (!user) return;
+    const tag = document.createElement('div');
+    tag.className = 'sm-tag';
+    tag.innerHTML = `
+      <div class="sm-avatar ${user.avatarClass}">${user.initials}</div>
+      <span>${user.name.split(' ')[0]}</span>
+      <button class="sm-remove" data-uid="${uid}">×</button>
+    `;
+    tag.querySelector('.sm-remove').addEventListener('click', () => {
+      selectedMemberIds.delete(uid);
+      const chip = memberSelector.querySelector(`[data-uid="${uid}"]`);
+      if (chip) chip.classList.remove('selected');
+      renderSelectedMembers();
+    });
+    selectedMembersEl.appendChild(tag);
   });
 }
 
-function createGroup() {
-  const groupName = groupNameInput.value.trim();
-  if (!groupName) {
-    alert('Please enter a group name');
+groupIconPicker.addEventListener('click', e => {
+  const btn = e.target.closest('.gip-btn');
+  if (!btn) return;
+  groupIconPicker.querySelectorAll('.gip-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  selectedGroupIcon = btn.dataset.icon;
+});
+
+cancelNewGroupBtn.addEventListener('click', closeNewGroupModal);
+newGroupModal.addEventListener('click', e => {
+  if (e.target === newGroupModal) closeNewGroupModal();
+});
+
+createGroupBtn.addEventListener('click', () => {
+  const name = newGroupName.value.trim();
+  if (!name) {
+    newGroupName.style.borderColor = '#f87171';
+    newGroupName.focus();
+    setTimeout(() => newGroupName.style.borderColor = '', 1200);
+    return;
+  }
+  if (selectedMemberIds.size === 0) {
+    showGlobalToast('Add at least one member', 'error');
     return;
   }
 
-  const selectedMembers = Array.from(document.querySelectorAll('.member-checkbox:checked')).map(cb => cb.value);
-  if (selectedMembers.length === 0) {
-    alert('Please select at least one member');
-    return;
-  }
-
-  // Create new group
-  const newChat = {
-    id: `chat${Date.now()}`,
+  const newGroup = {
+    id: ++groupIdCounter,
     type: 'group',
-    name: groupName,
-    participants: [currentUser, ...selectedMembers],
-    messages: []
+    name,
+    icon: selectedGroupIcon,
+    memberIds: [...selectedMemberIds],
+    unread: 0,
+    lastTime: now(),
+    messages: [
+      {
+        senderId: 'me',
+        senderName: 'You',
+        text: `${selectedGroupIcon} Group created! Welcome everyone.`,
+        time: now(),
+      }
+    ],
   };
 
-  chats.push(newChat);
+  GROUPS.unshift(newGroup);
+  closeNewGroupModal();
+  showGlobalToast(`"${name}" created`, 'success');
 
-  // Close modal and re-render
-  closeCreateGroupModal();
-  renderChatList(searchInput.value);
-}
-
-// ============================================================
-// EVENT LISTENERS
-// ============================================================
-
-createGroupBtn.addEventListener('click', openCreateGroupModal);
-cancelGroupBtn.addEventListener('click', closeCreateGroupModal);
-createGroupSubmitBtn.addEventListener('click', createGroup);
-
-// Close modal on overlay click
-createGroupModal.addEventListener('click', (e) => {
-  if (e.target === createGroupModal) {
-    closeCreateGroupModal();
-  }
+  // Auto-switch to groups tab and open the new group
+  switchSidebarTab('groups');
+  renderGroupList();
+  openGroupChat(newGroup.id);
 });
 
-// Close modal on Escape
-document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && !createGroupModal.classList.contains('hidden')) {
-    closeCreateGroupModal();
-  }
+newGroupBtn.addEventListener('click', openNewGroupModal);
+
+// ============================================================
+// GROUP INFO MODAL
+// ============================================================
+
+const groupInfoModal = document.getElementById('groupInfoModal');
+const groupInfoClose = document.getElementById('groupInfoClose');
+const giAvatar       = document.getElementById('giAvatar');
+const giGlow         = document.getElementById('giGlow');
+const giName         = document.getElementById('giName');
+const giMeta         = document.getElementById('giMeta');
+const giMembers      = document.getElementById('giMembers');
+const giLeaveBtn     = document.getElementById('giLeaveBtn');
+
+const GI_GLOW_COLORS = ['#00d4ff','#a855f7','#f43f5e','#fbbf24','#22d3a5','#fb923c'];
+
+function openGroupInfoModal(group) {
+  // Build stacked avatar in modal
+  giAvatar.innerHTML = buildGroupAvatarMini(group, 'lg');
+  giAvatar.className = 'gi-avatar group-avatar-stack lg';
+  giAvatar.innerHTML += `<span class="gi-icon-badge">${group.icon}</span>`;
+
+  const glowColor = GI_GLOW_COLORS[group.id % GI_GLOW_COLORS.length];
+  giGlow.style.background = glowColor;
+
+  giName.textContent = `${group.icon} ${group.name}`;
+  giMeta.textContent = `${group.memberIds.length + 1} members · Created by You`;
+
+  // Build member list
+  giMembers.innerHTML = '';
+  // "You" first
+  const youRow = document.createElement('div');
+  youRow.className = 'gi-member-row';
+  youRow.innerHTML = `
+    <div class="gi-member-avatar av-0">Y</div>
+    <div class="gi-member-info">
+      <span class="gi-member-name">You</span>
+      <span class="gi-member-tag" style="color:var(--cyan)">@you · Admin</span>
+    </div>
+    <span class="gi-online-dot online"></span>
+  `;
+  giMembers.appendChild(youRow);
+
+  group.memberIds.forEach(uid => {
+    const user = getUserById(uid);
+    if (!user) return;
+    const row = document.createElement('div');
+    row.className = 'gi-member-row';
+    row.innerHTML = `
+      <div class="gi-member-avatar ${user.avatarClass}">${user.initials}</div>
+      <div class="gi-member-info">
+        <span class="gi-member-name">${user.name}</span>
+        <span class="gi-member-tag">${user.usertag || '@' + user.name.toLowerCase().replace(' ','')}</span>
+      </div>
+      <span class="gi-online-dot ${user.online ? 'online' : 'offline'}"></span>
+    `;
+    row.style.cursor = 'pointer';
+    row.addEventListener('click', () => {
+      closeGroupInfoModal();
+      openProfileModal(user);
+    });
+    giMembers.appendChild(row);
+  });
+
+  groupInfoModal.classList.remove('hidden');
+}
+
+function closeGroupInfoModal() {
+  groupInfoModal.classList.add('hidden');
+}
+
+groupInfoClose.addEventListener('click', closeGroupInfoModal);
+groupInfoModal.addEventListener('click', e => {
+  if (e.target === groupInfoModal) closeGroupInfoModal();
+});
+
+giLeaveBtn.addEventListener('click', () => {
+  const group = getGroupById(activeGroupId);
+  if (!group) return;
+  const idx = GROUPS.indexOf(group);
+  if (idx > -1) GROUPS.splice(idx, 1);
+  closeGroupInfoModal();
+  renderGroupList();
+  activeGroupId = null;
+  emptyState.classList.remove('hidden');
+  activeChat.classList.add('hidden');
+  showGlobalToast(`Left "${group.name}"`, 'error');
 });
 
 // ============================================================
-// INIT
+// SETTINGS PAGE LOGIC
 // ============================================================
-
-function init() {
-  renderChatList();
-}
-
-init();
-
-// ── Password strength ──────────────────────────────────────
 
 function calcStrength(pw) {
   let score = 0;
@@ -563,7 +1003,7 @@ function calcStrength(pw) {
   if (/[A-Z]/.test(pw)) score++;
   if (/[0-9]/.test(pw)) score++;
   if (/[^A-Za-z0-9]/.test(pw)) score++;
-  return score; // 0-5
+  return score;
 }
 
 function updateStrengthUI(pw) {
@@ -581,11 +1021,7 @@ function updateStrengthUI(pw) {
 }
 
 const newPwInput = document.getElementById('newPw');
-if (newPwInput) {
-  newPwInput.addEventListener('input', () => updateStrengthUI(newPwInput.value));
-}
-
-// ── Password visibility toggles ───────────────────────────
+if (newPwInput) newPwInput.addEventListener('input', () => updateStrengthUI(newPwInput.value));
 
 document.addEventListener('click', e => {
   const btn = e.target.closest('.pw-toggle');
@@ -595,8 +1031,6 @@ document.addEventListener('click', e => {
   input.type = input.type === 'password' ? 'text' : 'password';
   btn.style.color = input.type === 'text' ? 'var(--cyan)' : '';
 });
-
-// ── Expandable: Change Password ────────────────────────────
 
 const changePassRow  = document.getElementById('changePassRow');
 const changePassBody = document.getElementById('changePassBody');
@@ -618,27 +1052,17 @@ function resetPasswordForm() {
   showInlineToast('', '', false);
 }
 
-// ── Save password ──────────────────────────────────────────
-
-const savePwBtn    = document.getElementById('savePwBtn');
-const cancelPwBtn  = document.getElementById('cancelPwBtn');
+const savePwBtn   = document.getElementById('savePwBtn');
+const cancelPwBtn = document.getElementById('cancelPwBtn');
 
 if (savePwBtn) {
   savePwBtn.addEventListener('click', () => {
     const cur  = document.getElementById('currentPw').value;
     const nw   = document.getElementById('newPw').value;
     const conf = document.getElementById('confirmPw').value;
-
-    if (!cur || !nw || !conf) {
-      showInlineToast('pwToast', 'Please fill all fields', 'error'); return;
-    }
-    if (nw !== conf) {
-      showInlineToast('pwToast', 'Passwords do not match', 'error'); return;
-    }
-    if (calcStrength(nw) < 2) {
-      showInlineToast('pwToast', 'Password too weak — add numbers & symbols', 'error'); return;
-    }
-    // Simulate API call
+    if (!cur || !nw || !conf) { showInlineToast('pwToast', 'Please fill all fields', 'error'); return; }
+    if (nw !== conf)          { showInlineToast('pwToast', 'Passwords do not match', 'error'); return; }
+    if (calcStrength(nw) < 2) { showInlineToast('pwToast', 'Password too weak', 'error'); return; }
     savePwBtn.textContent = 'Updating…';
     savePwBtn.disabled = true;
     setTimeout(() => {
@@ -670,8 +1094,7 @@ function showInlineToast(id, msg, type) {
   el.className = 'inline-toast ' + type;
 }
 
-// ── Delete Account ─────────────────────────────────────────
-
+// Delete account
 const deleteAccountRow = document.getElementById('deleteAccountRow');
 const deleteModal      = document.getElementById('deleteModal');
 const cancelDeleteBtn  = document.getElementById('cancelDeleteBtn');
@@ -693,7 +1116,6 @@ if (confirmDeleteBtn) {
   confirmDeleteBtn.addEventListener('click', () => {
     const pw = document.getElementById('deleteConfirmPw').value;
     if (!pw) {
-      document.getElementById('deleteConfirmPw').focus();
       document.getElementById('deleteConfirmPw').style.borderColor = '#f87171';
       return;
     }
@@ -708,7 +1130,6 @@ if (confirmDeleteBtn) {
   });
 }
 
-// Close modal on overlay click
 if (deleteModal) {
   deleteModal.addEventListener('click', e => {
     if (e.target === deleteModal) {
@@ -718,26 +1139,20 @@ if (deleteModal) {
   });
 }
 
-// ── Toggles ────────────────────────────────────────────────
-
+// Toggles
 function setupToggle(id, onMsg, offMsg) {
   const el = document.getElementById(id);
   if (!el) return;
-  el.addEventListener('change', () => {
-    showGlobalToast(el.checked ? onMsg : offMsg, 'success');
-  });
+  el.addEventListener('change', () => showGlobalToast(el.checked ? onMsg : offMsg, 'success'));
 }
+setupToggle('notifToggle',       'Notifications enabled',  'Notifications disabled');
+setupToggle('onlineStatusToggle','Online status visible',  'Online status hidden');
+setupToggle('searchableToggle',  'Searchable by usertag', 'Hidden from search');
+setupToggle('hiddenToggle',      'Hidden from discovery', 'Visible in discovery');
 
-setupToggle('notifToggle',      'Notifications enabled',     'Notifications disabled');
-setupToggle('onlineStatusToggle','Online status visible',    'Online status hidden');
-setupToggle('searchableToggle', 'Searchable by usertag',    'Hidden from search');
-setupToggle('hiddenToggle',     'Hidden from discovery',    'Visible in discovery');
-
-// ── Theme switcher ─────────────────────────────────────────
-
-const themeSwitcher  = document.getElementById('themeSwitcher');
-const themeSubLabel  = document.getElementById('themeSubLabel');
-
+// Theme
+const themeSwitcher = document.getElementById('themeSwitcher');
+const themeSubLabel = document.getElementById('themeSubLabel');
 if (themeSwitcher) {
   themeSwitcher.querySelectorAll('.theme-btn').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -746,29 +1161,23 @@ if (themeSwitcher) {
       const t = btn.dataset.theme;
       themeSubLabel.textContent = t === 'dark' ? 'Dark mode active' : 'Light mode active';
       showGlobalToast(t === 'dark' ? 'Dark theme applied' : 'Light theme applied', 'success');
-      // Placeholder: real theme toggle would swap CSS variables
     });
   });
 }
 
-// ── Avatar picker ──────────────────────────────────────────
-
-const avatarEditBtn  = document.getElementById('avatarEditBtn');
-const avatarModal    = document.getElementById('avatarModal');
-const cancelAvatarBtn= document.getElementById('cancelAvatarBtn');
-const saveAvatarBtn  = document.getElementById('saveAvatarBtn');
-const avatarInput    = document.getElementById('avatarInput');
-const settingsAvatar = document.getElementById('settingsAvatar');
-const selfAvatar     = document.querySelector('.self-avatar');
+// Avatar picker
+const avatarEditBtn   = document.getElementById('avatarEditBtn');
+const avatarModal     = document.getElementById('avatarModal');
+const cancelAvatarBtn = document.getElementById('cancelAvatarBtn');
+const saveAvatarBtn   = document.getElementById('saveAvatarBtn');
+const avatarInput     = document.getElementById('avatarInput');
+const settingsAvatar  = document.getElementById('settingsAvatar');
+const selfAvatar      = document.querySelector('.self-avatar');
 
 let pendingAvatarClass = 'av-0';
 let pendingAvatarImg   = null;
 
-if (avatarEditBtn) {
-  avatarEditBtn.addEventListener('click', () => {
-    avatarModal.classList.remove('hidden');
-  });
-}
+if (avatarEditBtn) avatarEditBtn.addEventListener('click', () => avatarModal.classList.remove('hidden'));
 
 if (avatarModal) {
   avatarModal.querySelectorAll('.ap-option[data-class]').forEach(opt => {
@@ -781,9 +1190,7 @@ if (avatarModal) {
   });
 
   const uploadBtn = document.getElementById('uploadAvatarBtn');
-  if (uploadBtn) {
-    uploadBtn.addEventListener('click', () => avatarInput.click());
-  }
+  if (uploadBtn) uploadBtn.addEventListener('click', () => avatarInput.click());
 
   avatarInput.addEventListener('change', e => {
     const file = e.target.files[0];
@@ -793,16 +1200,13 @@ if (avatarModal) {
       pendingAvatarImg = ev.target.result;
       avatarModal.querySelectorAll('.ap-option').forEach(o => o.classList.remove('active'));
       uploadBtn.classList.add('active');
-      const swatch = uploadBtn.querySelector('.ap-swatch');
-      swatch.innerHTML = `<img src="${pendingAvatarImg}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" />`;
+      uploadBtn.querySelector('.ap-swatch').innerHTML = `<img src="${pendingAvatarImg}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" />`;
     };
     reader.readAsDataURL(file);
   });
 }
 
-if (cancelAvatarBtn) {
-  cancelAvatarBtn.addEventListener('click', () => avatarModal.classList.add('hidden'));
-}
+if (cancelAvatarBtn) cancelAvatarBtn.addEventListener('click', () => avatarModal.classList.add('hidden'));
 
 if (saveAvatarBtn) {
   saveAvatarBtn.addEventListener('click', () => {
@@ -810,7 +1214,6 @@ if (saveAvatarBtn) {
       settingsAvatar.innerHTML = `<img src="${pendingAvatarImg}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" />`;
       if (selfAvatar) { selfAvatar.innerHTML = settingsAvatar.innerHTML; selfAvatar.className = 'user-avatar self-avatar'; }
     } else {
-      const cl = ['av-0','av-1','av-2','av-3','av-4','av-5'];
       settingsAvatar.className = `profile-avatar ${pendingAvatarClass}`;
       settingsAvatar.textContent = 'Y';
       if (selfAvatar) { selfAvatar.className = `user-avatar self-avatar ${pendingAvatarClass}`; selfAvatar.textContent = 'Y'; }
@@ -820,13 +1223,11 @@ if (saveAvatarBtn) {
   });
 }
 
-if (avatarModal) {
-  avatarModal.addEventListener('click', e => {
-    if (e.target === avatarModal) avatarModal.classList.add('hidden');
-  });
-}
+if (avatarModal) avatarModal.addEventListener('click', e => { if (e.target === avatarModal) avatarModal.classList.add('hidden'); });
 
-// ── Global toast ───────────────────────────────────────────
+// ============================================================
+// GLOBAL TOAST
+// ============================================================
 
 let toastTimeout = null;
 function showGlobalToast(msg, type = 'success') {
@@ -838,156 +1239,117 @@ function showGlobalToast(msg, type = 'success') {
   toastTimeout = setTimeout(() => el.classList.add('hidden'), 2800);
 }
 
-// ── Keyboard: close modals on Escape ──────────────────────
+// ============================================================
+// KEYBOARD: close modals on Escape
+// ============================================================
 
 document.addEventListener('keydown', e => {
   if (e.key !== 'Escape') return;
   document.getElementById('deleteModal')?.classList.add('hidden');
   document.getElementById('avatarModal')?.classList.add('hidden');
+  document.getElementById('profileModal')?.classList.add('hidden');
+  closeNewGroupModal();
+  closeGroupInfoModal();
 });
-
-
-
-
-
-
-
-
-
-
-
 
 // ============================================================
 // FRIEND PROFILE MODAL
 // ============================================================
- 
-const profileModal     = document.getElementById('profileModal');
-const profileModalBox  = document.getElementById('profileModalBox');
-const profileModalClose= document.getElementById('profileModalClose');
-const pmAvatar         = document.getElementById('pmAvatar');
-const pmAvatarRing     = document.getElementById('pmAvatarRing');
-const pmGlow           = document.getElementById('pmGlow');
-const profileModalTag  = document.getElementById('profileModalTag');
-const pmCopyBtn        = document.getElementById('pmCopyBtn');
-const pmCopyLabel      = document.querySelector('.pm-copy-label');
-const pmMessageBtn     = document.getElementById('pmMessageBtn');
- 
-// Glow colours that match each avatar gradient
+
+const profileModal      = document.getElementById('profileModal');
+const profileModalClose = document.getElementById('profileModalClose');
+const pmAvatar          = document.getElementById('pmAvatar');
+const pmGlow            = document.getElementById('pmGlow');
+const profileModalTag   = document.getElementById('profileModalTag');
+const pmCopyBtn         = document.getElementById('pmCopyBtn');
+const pmCopyLabel       = document.querySelector('.pm-copy-label');
+const pmMessageBtn      = document.getElementById('pmMessageBtn');
+
 const GLOW_COLORS = {
-  'av-0': '#00d4ff',
-  'av-1': '#a855f7',
-  'av-2': '#f43f5e',
-  'av-3': '#fbbf24',
-  'av-4': '#22d3a5',
-  'av-5': '#fb923c',
+  'av-0': '#00d4ff', 'av-1': '#a855f7', 'av-2': '#f43f5e',
+  'av-3': '#fbbf24', 'av-4': '#22d3a5', 'av-5': '#fb923c',
 };
- 
+
 function openProfileModal(user) {
-  // Populate avatar
   pmAvatar.className = `pm-avatar ${user.avatarClass}`;
   pmAvatar.textContent = user.initials;
- 
-  // Populate usertag
-  profileModalTag.textContent = user.usertag;
- 
-  // Colour the glow to match avatar
-  const glowColor = GLOW_COLORS[user.avatarClass] || '#00d4ff';
-  pmGlow.style.background = glowColor;
- 
-  // Wire message button to open chat and close modal
+  profileModalTag.textContent = user.usertag || '@' + user.name.toLowerCase().replace(' ','');
+  pmGlow.style.background = GLOW_COLORS[user.avatarClass] || '#00d4ff';
+
   pmMessageBtn.onclick = () => {
     closeProfileModal();
-    // Switch to chats view if not already there
     const chatsTab = document.querySelector('[data-view="view-chats"]');
     if (chatsTab) chatsTab.click();
-    // Small delay so view transition completes first
+    switchSidebarTab('dms');
     setTimeout(() => openChat(user.id), 60);
   };
- 
-  // Reset copy button
+
   resetCopyBtn();
- 
-  // Show
   profileModal.classList.remove('hidden');
   document.body.style.overflow = 'hidden';
 }
- 
+
 function closeProfileModal() {
   profileModal.classList.add('hidden');
   document.body.style.overflow = '';
 }
- 
+
 function resetCopyBtn() {
   if (!pmCopyLabel) return;
   pmCopyLabel.textContent = 'Copy';
   pmCopyBtn.classList.remove('copied');
 }
- 
-// ── Trigger: click on a sidebar avatar ────────────────────
-// We delegate from chatList since items are dynamically rendered
+
+// Delegate: click on sidebar DM avatar
 chatListEl.addEventListener('click', e => {
   const avatarWrap = e.target.closest('.ci-avatar-wrap');
   if (!avatarWrap) return;
   const chatItem = avatarWrap.closest('.chat-item');
-  if (!chatItem) return;
-  e.stopPropagation(); // Don't also open the chat
+  if (!chatItem || chatItem.classList.contains('group-chat-item')) return;
+  e.stopPropagation();
   const user = getUserById(Number(chatItem.dataset.id));
   if (user) openProfileModal(user);
 });
- 
-// ── Trigger: click on the in-chat header avatar ────────────
+
+// In-chat header avatar (DM only)
 const chatHeaderAvatarEl = document.getElementById('chatHeaderAvatar');
 if (chatHeaderAvatarEl) {
   chatHeaderAvatarEl.addEventListener('click', () => {
-    if (activeChatId === null) return;
-    const chat = getChatById(activeChatId);
-    if (chat && chat.type === 'private') {
-      const user = getUserById(getOtherParticipant(chat));
-      if (user) openProfileModal(user);
-    }
+    if (activeUserId === null) return;
+    const user = getUserById(activeUserId);
+    if (user) openProfileModal(user);
   });
   chatHeaderAvatarEl.addEventListener('keydown', e => {
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault();
-      chatHeaderAvatarEl.click();
-    }
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); chatHeaderAvatarEl.click(); }
   });
 }
- 
-// ── Close: button ──────────────────────────────────────────
-if (profileModalClose) {
-  profileModalClose.addEventListener('click', closeProfileModal);
-}
- 
-// ── Close: click outside ───────────────────────────────────
-if (profileModal) {
-  profileModal.addEventListener('click', e => {
-    if (e.target === profileModal) closeProfileModal();
-  });
-}
- 
-// ── Close: Escape key ──────────────────────────────────────
-document.addEventListener('keydown', e => {
-  if (e.key === 'Escape' && !profileModal.classList.contains('hidden')) {
-    closeProfileModal();
-  }
-});
- 
-// ── Copy usertag ───────────────────────────────────────────
+
+if (profileModalClose) profileModalClose.addEventListener('click', closeProfileModal);
+if (profileModal)      profileModal.addEventListener('click', e => { if (e.target === profileModal) closeProfileModal(); });
+
 if (pmCopyBtn) {
   pmCopyBtn.addEventListener('click', () => {
     const tag = profileModalTag.textContent;
     if (!tag) return;
-    navigator.clipboard.writeText(tag).then(() => {
-      pmCopyLabel.textContent = 'Copied!';
-      pmCopyBtn.classList.add('copied');
-      setTimeout(resetCopyBtn, 2000);
-    }).catch(() => {
-      // Fallback for browsers without clipboard API
+    navigator.clipboard.writeText(tag).catch(() => {}).finally(() => {
       pmCopyLabel.textContent = 'Copied!';
       pmCopyBtn.classList.add('copied');
       setTimeout(resetCopyBtn, 2000);
     });
   });
 }
- 
+
+// ============================================================
+// INIT
+// ============================================================
+
+function init() {
+  switchSidebarTab('dms');
+  renderChatList();
+  renderGroupList();
+  // new group btn starts subtle for DMs tab
+  newGroupBtn.style.opacity = '0.4';
+  newGroupBtn.style.pointerEvents = 'none';
+}
+
+init();
