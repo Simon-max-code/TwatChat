@@ -28,6 +28,12 @@
 
     <!-- ===== SIDEBAR ===== -->
     <aside class="sidebar" id="sidebar">
+      <button class="create-group-btn" id="createGroupBtn" title="Create Group">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 5v14M5 12h14"/>
+        </svg>
+        Create Group
+      </button>
       <div class="sidebar-search">
         <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
@@ -475,6 +481,29 @@
       <span>Settings</span>
     </button>
   </nav>
+
+  <!-- ========== CREATE GROUP MODAL ========== -->
+  <div class="modal-overlay hidden" id="createGroupModal">
+    <div class="modal-box">
+      <h3 class="modal-title">Create Group</h3>
+      <div class="modal-body">
+        <div class="input-group">
+          <label class="input-label">Group Name</label>
+          <input type="text" id="groupNameInput" class="settings-input" placeholder="Enter group name" maxlength="50">
+        </div>
+        <div class="input-group">
+          <label class="input-label">Add Members</label>
+          <div id="membersList" class="members-list">
+            <!-- Members will be populated by JS -->
+          </div>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="action-btn ghost" id="cancelGroupBtn">Cancel</button>
+        <button class="action-btn primary" id="createGroupSubmitBtn">Create Group</button>
+      </div>
+    </div>
+  </div>
 
   <!-- ========== DELETE ACCOUNT MODAL ========== -->
   <div class="modal-overlay hidden" id="deleteModal">

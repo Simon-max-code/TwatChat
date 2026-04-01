@@ -9,116 +9,45 @@
 // DUMMY DATA
 // ============================================================
 
-const USERS = [
+const currentUser = "user1";
+
+const users = [
+  { id: "user1", name: "You", avatarClass: "av-0" },
+  { id: "user2", name: "Alice", avatarClass: "av-1" },
+  { id: "user3", name: "Bob", avatarClass: "av-2" },
+  { id: "user4", name: "Charlie", avatarClass: "av-3" },
+  { id: "user5", name: "Diana", avatarClass: "av-4" }
+];
+
+const chats = [
   {
-    id: 1,
-    name: 'Golden Amu',
-    initials: 'GA',
-    avatarClass: 'av-0',
-    online: true,
-    unread: 3,
-    lastTime: '10:42',
+    id: "chat1",
+    type: "private",
+    participants: ["user1", "user2"],
     messages: [
-      { from: 'them', text: 'Hey! Did you check out the new design system?', time: '10:30' },
-      { from: 'me',   text: 'Yeah, it\'s looking really clean. Love the token structure.', time: '10:31' },
-      { from: 'them', text: 'Right? The dark mode tokens are 🔥', time: '10:33' },
-      { from: 'me',   text: 'Sent you the PR link — can you review when you get a chance?', time: '10:35' },
-      { from: 'them', text: 'On it. Give me 20 minutes.', time: '10:36' },
-      { from: 'them', text: 'Also quick question — are we using Syne for the headings?', time: '10:41' },
-      { from: 'them', text: 'Need to update the Figma file if so', time: '10:42' },
-    ],
+      { sender: "user2", content: "Hey! How's it going?", timestamp: Date.now() - 3600000 },
+      { sender: "user1", content: "Good! Working on some new features.", timestamp: Date.now() - 3500000 },
+      { sender: "user2", content: "Nice! What kind of features?", timestamp: Date.now() - 3400000 }
+    ]
   },
   {
-    id: 2,
-    name: 'Omni Amu',
-    initials: 'OA',
-    avatarClass: 'av-1',
-    online: true,
-    unread: 1,
-    lastTime: '09:58',
+    id: "chat2",
+    type: "group",
+    name: "Project Team",
+    participants: ["user1", "user2", "user3"],
     messages: [
-      { from: 'me',   text: 'Hey, you joining the standup?', time: '09:45' },
-      { from: 'them', text: 'Already in. You\'re late 😂', time: '09:46' },
-      { from: 'me',   text: 'lmaooo two minutes doesn\'t count', time: '09:47' },
-      { from: 'them', text: 'The CI pipeline broke again btw', time: '09:55' },
-      { from: 'me',   text: 'Of course it did. Same env issue?', time: '09:56' },
-      { from: 'them', text: 'Nah, looks like the Docker image cache got wiped', time: '09:58' },
-    ],
-  },
-  {
-    id: 3,
-    name: 'Brutally Gay',
-    initials: 'BG',
-    avatarClass: 'av-2',
-    online: false,
-    unread: 0,
-    lastTime: 'Yesterday',
-    messages: [
-      { from: 'them', text: 'Can you send me the wireframes when ready?', time: 'Yesterday' },
-      { from: 'me',   text: 'Just exported them — check your email!', time: 'Yesterday' },
-      { from: 'them', text: 'Got them, thanks! These look amazing 😍', time: 'Yesterday' },
-      { from: 'me',   text: 'Glad you like it! Let me know if anything needs tweaking.', time: 'Yesterday' },
-      { from: 'them', text: 'The hero section might need a bit more breathing room but otherwise perfect', time: 'Yesterday' },
-    ],
-  },
-  {
-    id: 4,
-    name: 'Aunty Linda',
-    initials: 'AL',
-    avatarClass: 'av-3',
-    online: true,
-    unread: 7,
-    lastTime: '11:05',
-    messages: [
-      { from: 'them', text: 'The client wants a demo by Friday 😬', time: '11:00' },
-      { from: 'me',   text: 'That\'s in 3 days... what\'s the scope?', time: '11:01' },
-      { from: 'them', text: 'Login flow, dashboard overview, and the reporting module', time: '11:02' },
-      { from: 'them', text: 'Basically the whole thing lol', time: '11:02' },
-      { from: 'me',   text: 'Ok let\'s triage — what\'s the MVP of the MVP?', time: '11:03' },
-      { from: 'them', text: 'Dashboard is the must-have. Rest can be mocked.', time: '11:04' },
-      { from: 'them', text: 'Let\'s hop on a call?', time: '11:05' },
-    ],
-  },
-  {
-    id: 5,
-    name: 'Evil Spawn',
-    initials: 'ES',
-    avatarClass: 'av-4',
-    online: false,
-    unread: 0,
-    lastTime: 'Mon',
-    messages: [
-      { from: 'me',   text: 'Did the deployment go through?', time: 'Mon' },
-      { from: 'them', text: 'Yep! Prod is green 🟢', time: 'Mon' },
-      { from: 'me',   text: 'Smooth! Great work on the migration script.', time: 'Mon' },
-      { from: 'them', text: 'Thanks! Couldn\'t have done it without the runbook you wrote', time: 'Mon' },
-      { from: 'me',   text: 'Teamwork makes the dream work 🙌', time: 'Mon' },
-    ],
-  },
-  {
-    id: 6,
-    name: 'Sirsimon',
-    initials: 'Ss',
-    avatarClass: 'av-5',
-    online: true,
-    unread: 2,
-    lastTime: '08:30',
-    messages: [
-      { from: 'them', text: 'Morning! Coffee first, then code ☕', time: '08:15' },
-      { from: 'me',   text: 'Always. What are you working on today?', time: '08:17' },
-      { from: 'them', text: 'Finally tackling that auth refactor. Wish me luck.', time: '08:20' },
-      { from: 'me',   text: 'You\'ve got this. The old code was... character-building.', time: '08:22' },
-      { from: 'them', text: 'Haha "character-building" is generous', time: '08:25' },
-      { from: 'them', text: 'Hey can you review the new token refresh logic later?', time: '08:30' },
-    ],
-  },
+      { sender: "user2", content: "Team meeting at 3 PM today", timestamp: Date.now() - 7200000 },
+      { sender: "user3", content: "Got it, I'll be there", timestamp: Date.now() - 7100000 },
+      { sender: "user1", content: "See you all then!", timestamp: Date.now() - 7000000 }
+    ]
+  }
 ];
 
 // ============================================================
 // STATE
 // ============================================================
 
-let activeUserId = null;   // ID of currently open chat
+let activeChatId = null;   // ID of currently open chat
 let typingTimer   = null;  // Timeout reference for typing simulation
 
 // ============================================================
@@ -140,6 +69,12 @@ const sendBtn         = document.getElementById('sendBtn');
 const backBtn         = document.getElementById('backBtn');
 const sidebar         = document.getElementById('sidebar');
 const navTabs         = document.querySelectorAll('.nav-tab');
+const createGroupBtn  = document.getElementById('createGroupBtn');
+const createGroupModal= document.getElementById('createGroupModal');
+const groupNameInput  = document.getElementById('groupNameInput');
+const membersList     = document.getElementById('membersList');
+const cancelGroupBtn  = document.getElementById('cancelGroupBtn');
+const createGroupSubmitBtn = document.getElementById('createGroupSubmitBtn');
 
 // ============================================================
 // HELPERS
@@ -161,7 +96,37 @@ function scrollToBottom(smooth = true) {
 
 /** Get user by ID */
 function getUserById(id) {
-  return USERS.find(u => u.id === id);
+  return users.find(u => u.id === id);
+}
+
+/** Get chat by ID */
+function getChatById(id) {
+  return chats.find(c => c.id === id);
+}
+
+/** Get the other participant in a private chat */
+function getOtherParticipant(chat) {
+  return chat.participants.find(p => p !== currentUser);
+}
+
+/** Get display name for a chat */
+function getChatDisplayName(chat) {
+  if (chat.type === 'group') {
+    return chat.name;
+  } else {
+    const otherUser = getUserById(getOtherParticipant(chat));
+    return otherUser ? otherUser.name : 'Unknown';
+  }
+}
+
+/** Get avatar class for a chat */
+function getChatAvatarClass(chat) {
+  if (chat.type === 'group') {
+    return 'av-0'; // Default group avatar
+  } else {
+    const otherUser = getUserById(getOtherParticipant(chat));
+    return otherUser ? otherUser.avatarClass : 'av-0';
+  }
 }
 
 // ============================================================
@@ -172,39 +137,43 @@ function renderChatList(filter = '') {
   chatListEl.innerHTML = '';
   const lower = filter.toLowerCase();
 
-  const filtered = USERS.filter(u => u.name.toLowerCase().includes(lower));
+  const filtered = chats.filter(chat => {
+    const displayName = getChatDisplayName(chat).toLowerCase();
+    return displayName.includes(lower);
+  });
 
   if (!filtered.length) {
     chatListEl.innerHTML = `<p style="text-align:center;color:var(--text-muted);padding:20px;font-size:13px;">No chats found</p>`;
     return;
   }
 
-  filtered.forEach(user => {
-    const lastMsg = user.messages[user.messages.length - 1];
-    const preview = lastMsg ? lastMsg.text : 'No messages yet';
+  filtered.forEach(chat => {
+    const lastMsg = chat.messages[chat.messages.length - 1];
+    const preview = lastMsg ? lastMsg.content : 'No messages yet';
+    const displayName = getChatDisplayName(chat);
+    const avatarClass = getChatAvatarClass(chat);
+    const initials = chat.type === 'group' ? displayName.substring(0, 2).toUpperCase() : getUserById(getOtherParticipant(chat)).name.split(' ').map(n => n[0]).join('');
 
     const item = document.createElement('div');
-    item.className = 'chat-item' + (user.id === activeUserId ? ' active' : '');
-    item.dataset.id = user.id;
+    item.className = 'chat-item' + (chat.id === activeChatId ? ' active' : '');
+    item.dataset.id = chat.id;
 
     item.innerHTML = `
       <div class="ci-avatar-wrap">
-        <div class="ci-avatar ${user.avatarClass}">${user.initials}</div>
-        <span class="ci-status ${user.online ? 'online' : 'offline'}"></span>
+        <div class="ci-avatar ${avatarClass}">${initials}</div>
       </div>
       <div class="ci-content">
         <div class="ci-top">
-          <span class="ci-name">${user.name}</span>
-          <span class="ci-time">${user.lastTime}</span>
+          <span class="ci-name">${displayName}</span>
+          <span class="ci-time">${lastMsg ? new Date(lastMsg.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : ''}</span>
         </div>
         <div class="ci-bottom">
           <span class="ci-preview">${preview}</span>
-          ${user.unread > 0 ? `<span class="ci-badge">${user.unread}</span>` : ''}
         </div>
       </div>
     `;
 
-    item.addEventListener('click', () => openChat(user.id));
+    item.addEventListener('click', () => openChat(chat.id));
     chatListEl.appendChild(item);
   });
 }
@@ -213,7 +182,7 @@ function renderChatList(filter = '') {
 // RENDER: MESSAGES
 // ============================================================
 
-function renderMessages(user) {
+function renderMessages(chat) {
   messagesArea.innerHTML = '';
 
   // Date divider at top
@@ -222,12 +191,12 @@ function renderMessages(user) {
   divider.innerHTML = '<span>Today</span>';
   messagesArea.appendChild(divider);
 
-  let prevFrom = null;
+  let prevSender = null;
 
-  user.messages.forEach((msg, idx) => {
-    const isGap = prevFrom !== msg.from && idx > 0;
-    renderBubble(msg, user, isGap, false);
-    prevFrom = msg.from;
+  chat.messages.forEach((msg, idx) => {
+    const isGap = prevSender !== msg.sender && idx > 0;
+    renderBubble(msg, chat, isGap, false);
+    prevSender = msg.sender;
   });
 
   scrollToBottom(false);
@@ -235,25 +204,40 @@ function renderMessages(user) {
 
 /**
  * Render a single message bubble into the messages area.
- * @param {object} msg    - { from, text, time }
- * @param {object} user   - the user object (for avatar)
+ * @param {object} msg    - { sender, content, timestamp }
+ * @param {object} chat   - the chat object
  * @param {boolean} gap   - add gap-above spacing
  * @param {boolean} smooth - smooth scroll
  */
-function renderBubble(msg, user, gap = false, smooth = true) {
-  const isSent = msg.from === 'me';
+function renderBubble(msg, chat, gap = false, smooth = true) {
+  const isSent = msg.sender === currentUser;
+  const sender = getUserById(msg.sender);
+  const senderName = sender ? sender.name : 'Unknown';
+
   const div = document.createElement('div');
   div.className = `message ${isSent ? 'sent' : 'received'}${gap ? ' gap-above' : ''}`;
 
   // Avatar (only shown on received messages; hidden for consecutive)
   const avatarHidden = !gap && !isSent && messagesArea.lastElementChild?.classList.contains('message');
+  const avatarClass = sender ? sender.avatarClass : 'av-0';
+  const initials = sender ? sender.name.split(' ').map(n => n[0]).join('') : 'U';
+
+  let avatarHtml = '';
+  if (!isSent) {
+    avatarHtml = `<div class="msg-avatar ${avatarClass} ${!gap ? 'hidden-avatar' : ''}">${initials}</div>`;
+  }
+
+  let senderNameHtml = '';
+  if (chat.type === 'group' && !isSent && gap) {
+    senderNameHtml = `<div class="msg-sender">${senderName}</div>`;
+  }
+
   div.innerHTML = `
-    <div class="msg-avatar ${isSent ? 'av-0' : user.avatarClass} ${!isSent && !gap ? 'hidden-avatar' : ''}">
-      ${isSent ? 'Y' : user.initials}
-    </div>
+    ${avatarHtml}
     <div class="msg-body">
-      <div class="msg-bubble">${escapeHTML(msg.text)}</div>
-      <span class="msg-time">${msg.time}</span>
+      ${senderNameHtml}
+      <div class="msg-bubble">${escapeHTML(msg.content)}</div>
+      <span class="msg-time">${new Date(msg.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
     </div>
   `;
 
@@ -274,43 +258,47 @@ function escapeHTML(str) {
 // OPEN CHAT
 // ============================================================
 
-function openChat(userId) {
-  const user = getUserById(userId);
-  if (!user) return;
+function openChat(chatId) {
+  const chat = getChatById(chatId);
+  if (!chat) return;
 
   // Clear previous typing timer
   clearTimeout(typingTimer);
   typingIndicator.classList.add('hidden');
 
-  activeUserId = userId;
-
-  // Clear unread badge
-  user.unread = 0;
+  activeChatId = chatId;
 
   // Update sidebar active state
   renderChatList(searchInput.value);
 
   // Update chat header
-  chatHeaderAvatar.className = `chat-header-avatar ${user.avatarClass}`;
-  chatHeaderAvatar.textContent = user.initials;
-  chatHeaderName.textContent = user.name;
-  chatHeaderStatus.textContent = user.online ? '● Online' : '● Offline';
-  chatHeaderStatus.className = 'chat-header-status' + (user.online ? ' is-online' : '');
+  const displayName = getChatDisplayName(chat);
+  const avatarClass = getChatAvatarClass(chat);
+  const initials = chat.type === 'group' ? displayName.substring(0, 2).toUpperCase() : getUserById(getOtherParticipant(chat)).name.split(' ').map(n => n[0]).join('');
+
+  chatHeaderAvatar.className = `chat-header-avatar ${avatarClass}`;
+  chatHeaderAvatar.textContent = initials;
+  chatHeaderName.textContent = displayName;
+
+  if (chat.type === 'group') {
+    const participantCount = chat.participants.length;
+    chatHeaderStatus.textContent = `${participantCount} members`;
+    chatHeaderStatus.className = 'chat-header-status';
+  } else {
+    const otherUser = getUserById(getOtherParticipant(chat));
+    chatHeaderStatus.textContent = otherUser ? 'Online' : 'Offline';
+    chatHeaderStatus.className = 'chat-header-status' + (otherUser ? ' is-online' : '');
+  }
 
   // Show chat, hide empty state
   emptyState.classList.add('hidden');
   activeChat.classList.remove('hidden');
 
   // Render messages
-  renderMessages(user);
+  renderMessages(chat);
 
   // On mobile: slide sidebar away
   sidebar.classList.add('hidden-mobile');
-
-  // Trigger fake typing if user is online
-  if (user.online) {
-    scheduleFakeReply(user);
-  }
 
   // Focus input
   msgInput.focus();
@@ -322,21 +310,20 @@ function openChat(userId) {
 
 function sendMessage() {
   const text = msgInput.value.trim();
-  if (!text || activeUserId === null) return;
+  if (!text || activeChatId === null) return;
 
-  const user = getUserById(activeUserId);
-  const msg = { from: 'me', text, time: now() };
+  const chat = getChatById(activeChatId);
+  const msg = { sender: currentUser, content: text, timestamp: Date.now() };
 
-  // Push to user's message history
-  user.messages.push(msg);
-  user.lastTime = now();
+  // Push to chat's message history
+  chat.messages.push(msg);
 
-  // Determine if gap needed (last msg was from 'them')
-  const prevMsg = user.messages[user.messages.length - 2];
-  const gap = prevMsg && prevMsg.from !== 'me';
+  // Determine if gap needed (last msg was from different sender)
+  const prevMsg = chat.messages[chat.messages.length - 2];
+  const gap = prevMsg && prevMsg.sender !== currentUser;
 
   // Render bubble
-  renderBubble(msg, user, gap, true);
+  renderBubble(msg, chat, gap, true);
 
   // Update sidebar preview
   renderChatList(searchInput.value);
@@ -344,10 +331,8 @@ function sendMessage() {
   // Clear input
   msgInput.value = '';
 
-  // If user is online, simulate reply
-  if (user.online) {
-    scheduleFakeReply(user);
-  }
+  // Simulate reply
+  scheduleFakeReply(chat);
 }
 
 // ============================================================
@@ -372,39 +357,46 @@ const FAKE_REPLIES = [
   "That's exactly what I was thinking.",
 ];
 
-function scheduleFakeReply(user) {
-  // Only simulate if this user is actively open
-  if (user.id !== activeUserId) return;
+function scheduleFakeReply(chat) {
+  // Only simulate if this chat is actively open
+  if (chat.id !== activeChatId) return;
 
   clearTimeout(typingTimer);
+
+  // Pick a random participant (not current user)
+  const availableParticipants = chat.participants.filter(p => p !== currentUser);
+  if (availableParticipants.length === 0) return;
+
+  const randomParticipant = availableParticipants[Math.floor(Math.random() * availableParticipants.length)];
+  const participant = getUserById(randomParticipant);
 
   // Show typing indicator after a short delay
   const typingDelay = 1200 + Math.random() * 1400;
 
   typingTimer = setTimeout(() => {
-    if (user.id !== activeUserId) return;
+    if (chat.id !== activeChatId) return;
 
     // Show typing
-    typingName.textContent = user.name.split(' ')[0];
+    typingName.textContent = participant ? participant.name.split(' ')[0] : 'Someone';
     typingIndicator.classList.remove('hidden');
     scrollToBottom(true);
 
     // Send reply after typing duration
     const replyDelay = 1500 + Math.random() * 1500;
     typingTimer = setTimeout(() => {
-      if (user.id !== activeUserId) return;
+      if (chat.id !== activeChatId) return;
 
       typingIndicator.classList.add('hidden');
 
       const replyText = FAKE_REPLIES[Math.floor(Math.random() * FAKE_REPLIES.length)];
-      const replyMsg = { from: 'them', text: replyText, time: now() };
-      user.messages.push(replyMsg);
-      user.lastTime = now();
+      const replyMsg = { sender: randomParticipant, content: replyText, timestamp: Date.now() };
 
-      const prevMsg = user.messages[user.messages.length - 2];
-      const gap = prevMsg && prevMsg.from !== 'them';
+      chat.messages.push(replyMsg);
 
-      renderBubble(replyMsg, user, gap, true);
+      const prevMsg = chat.messages[chat.messages.length - 2];
+      const gap = prevMsg && prevMsg.sender !== randomParticipant;
+
+      renderBubble(replyMsg, chat, gap, true);
       renderChatList(searchInput.value);
 
     }, replyDelay);
@@ -431,7 +423,7 @@ function switchTab(targetViewId, clickedTab) {
       sidebar.classList.add('hidden-mobile');
     } else {
       // Only restore sidebar if no chat is actively open
-      if (activeUserId === null) {
+      if (activeChatId === null) {
         sidebar.classList.remove('hidden-mobile');
       }
     }
@@ -466,18 +458,90 @@ msgInput.addEventListener('keydown', e => {
 });
 
 // ============================================================
-// BACK BUTTON (mobile)
+// CREATE GROUP
 // ============================================================
 
-backBtn.addEventListener('click', () => {
-  sidebar.classList.remove('hidden-mobile');
-  activeUserId = null;
-  emptyState.classList.remove('hidden');
-  activeChat.classList.add('hidden');
-  clearTimeout(typingTimer);
-  typingIndicator.classList.add('hidden');
-  // Deactivate all chat items
-  document.querySelectorAll('.chat-item').forEach(el => el.classList.remove('active'));
+function openCreateGroupModal() {
+  // Reset form
+  groupNameInput.value = '';
+  renderMembersList();
+
+  // Show modal
+  createGroupModal.classList.remove('hidden');
+}
+
+function closeCreateGroupModal() {
+  createGroupModal.classList.add('hidden');
+}
+
+function renderMembersList() {
+  membersList.innerHTML = '';
+
+  users.forEach(user => {
+    if (user.id === currentUser) return; // Don't include current user in selectable list
+
+    const item = document.createElement('div');
+    item.className = 'member-item';
+
+    item.innerHTML = `
+      <input type="checkbox" class="member-checkbox" id="member-${user.id}" value="${user.id}">
+      <div class="member-avatar ${user.avatarClass}">${user.name.split(' ').map(n => n[0]).join('')}</div>
+      <label class="member-name" for="member-${user.id}">${user.name}</label>
+    `;
+
+    membersList.appendChild(item);
+  });
+}
+
+function createGroup() {
+  const groupName = groupNameInput.value.trim();
+  if (!groupName) {
+    alert('Please enter a group name');
+    return;
+  }
+
+  const selectedMembers = Array.from(document.querySelectorAll('.member-checkbox:checked')).map(cb => cb.value);
+  if (selectedMembers.length === 0) {
+    alert('Please select at least one member');
+    return;
+  }
+
+  // Create new group
+  const newChat = {
+    id: `chat${Date.now()}`,
+    type: 'group',
+    name: groupName,
+    participants: [currentUser, ...selectedMembers],
+    messages: []
+  };
+
+  chats.push(newChat);
+
+  // Close modal and re-render
+  closeCreateGroupModal();
+  renderChatList(searchInput.value);
+}
+
+// ============================================================
+// EVENT LISTENERS
+// ============================================================
+
+createGroupBtn.addEventListener('click', openCreateGroupModal);
+cancelGroupBtn.addEventListener('click', closeCreateGroupModal);
+createGroupSubmitBtn.addEventListener('click', createGroup);
+
+// Close modal on overlay click
+createGroupModal.addEventListener('click', (e) => {
+  if (e.target === createGroupModal) {
+    closeCreateGroupModal();
+  }
+});
+
+// Close modal on Escape
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && !createGroupModal.classList.contains('hidden')) {
+    closeCreateGroupModal();
+  }
 });
 
 // ============================================================
@@ -489,9 +553,6 @@ function init() {
 }
 
 init();
-// ============================================================
-// SETTINGS PAGE LOGIC
-// ============================================================
 
 // ── Password strength ──────────────────────────────────────
 
@@ -878,9 +939,12 @@ chatListEl.addEventListener('click', e => {
 const chatHeaderAvatarEl = document.getElementById('chatHeaderAvatar');
 if (chatHeaderAvatarEl) {
   chatHeaderAvatarEl.addEventListener('click', () => {
-    if (activeUserId === null) return;
-    const user = getUserById(activeUserId);
-    if (user) openProfileModal(user);
+    if (activeChatId === null) return;
+    const chat = getChatById(activeChatId);
+    if (chat && chat.type === 'private') {
+      const user = getUserById(getOtherParticipant(chat));
+      if (user) openProfileModal(user);
+    }
   });
   chatHeaderAvatarEl.addEventListener('keydown', e => {
     if (e.key === 'Enter' || e.key === ' ') {
