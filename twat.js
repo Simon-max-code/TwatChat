@@ -415,18 +415,28 @@ function scheduleFakeReply(user) {
 // ============================================================
 // BOTTOM NAV — TAB SWITCHING
 // ============================================================
-
+// ── NEW ──
 function switchTab(targetViewId, clickedTab) {
-  // Update nav tabs
   navTabs.forEach(t => t.classList.remove('active'));
   clickedTab.classList.add('active');
 
-  // Update views
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   const targetView = document.getElementById(targetViewId);
   if (targetView) targetView.classList.add('active');
-}
 
+  // On mobile: if switching AWAY from chats, hide sidebar so the view is reachable
+  // If switching TO chats and no chat is open, show sidebar
+  if (window.innerWidth <= 680) {
+    if (targetViewId !== 'view-chats') {
+      sidebar.classList.add('hidden-mobile');
+    } else {
+      // Only restore sidebar if no chat is actively open
+      if (activeUserId === null) {
+        sidebar.classList.remove('hidden-mobile');
+      }
+    }
+  }
+}
 navTabs.forEach(tab => {
   tab.addEventListener('click', () => {
     const viewId = tab.dataset.view;
