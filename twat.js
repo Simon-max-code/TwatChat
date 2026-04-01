@@ -12,8 +12,8 @@
 const USERS = [
   {
     id: 1,
-    name: 'Nova Reyes',
-    initials: 'NR',
+    name: 'Golden Amu',
+    initials: 'GA',
     avatarClass: 'av-0',
     online: true,
     unread: 3,
@@ -30,8 +30,8 @@ const USERS = [
   },
   {
     id: 2,
-    name: 'Kael Dusk',
-    initials: 'KD',
+    name: 'Omni Amu',
+    initials: 'OA',
     avatarClass: 'av-1',
     online: true,
     unread: 1,
@@ -47,8 +47,8 @@ const USERS = [
   },
   {
     id: 3,
-    name: 'Lyra Chen',
-    initials: 'LC',
+    name: 'Brutally Gay',
+    initials: 'BG',
     avatarClass: 'av-2',
     online: false,
     unread: 0,
@@ -63,8 +63,8 @@ const USERS = [
   },
   {
     id: 4,
-    name: 'Orion Blake',
-    initials: 'OB',
+    name: 'Aunty Linda',
+    initials: 'AL',
     avatarClass: 'av-3',
     online: true,
     unread: 7,
@@ -81,8 +81,8 @@ const USERS = [
   },
   {
     id: 5,
-    name: 'Zara Volt',
-    initials: 'ZV',
+    name: 'Evil Spawn',
+    initials: 'ES',
     avatarClass: 'av-4',
     online: false,
     unread: 0,
@@ -97,8 +97,8 @@ const USERS = [
   },
   {
     id: 6,
-    name: 'Fen Nakamura',
-    initials: 'FN',
+    name: 'Sirsimon',
+    initials: 'Ss',
     avatarClass: 'av-5',
     online: true,
     unread: 2,
