@@ -479,3 +479,298 @@ function init() {
 }
 
 init();
+// ============================================================
+// SETTINGS PAGE LOGIC
+// ============================================================
+
+// ── Password strength ──────────────────────────────────────
+
+function calcStrength(pw) {
+  let score = 0;
+  if (pw.length >= 8)  score++;
+  if (pw.length >= 12) score++;
+  if (/[A-Z]/.test(pw)) score++;
+  if (/[0-9]/.test(pw)) score++;
+  if (/[^A-Za-z0-9]/.test(pw)) score++;
+  return score; // 0-5
+}
+
+function updateStrengthUI(pw) {
+  const fill  = document.getElementById('pwStrengthFill');
+  const label = document.getElementById('pwStrengthLabel');
+  if (!fill || !label) return;
+  if (!pw) { fill.style.width = '0%'; label.textContent = ''; return; }
+  const s = calcStrength(pw);
+  const pct   = (s / 5) * 100;
+  const colors = ['#ef4444','#f97316','#eab308','#22d3a5','#00d4ff'];
+  const labels = ['Very weak','Weak','Fair','Strong','Very strong'];
+  fill.style.width = pct + '%';
+  fill.style.background = colors[Math.min(s - 1, 4)] || '#ef4444';
+  label.textContent = pw ? (labels[Math.min(s - 1, 4)] || 'Very weak') : '';
+}
+
+const newPwInput = document.getElementById('newPw');
+if (newPwInput) {
+  newPwInput.addEventListener('input', () => updateStrengthUI(newPwInput.value));
+}
+
+// ── Password visibility toggles ───────────────────────────
+
+document.addEventListener('click', e => {
+  const btn = e.target.closest('.pw-toggle');
+  if (!btn) return;
+  const input = document.getElementById(btn.dataset.target);
+  if (!input) return;
+  input.type = input.type === 'password' ? 'text' : 'password';
+  btn.style.color = input.type === 'text' ? 'var(--cyan)' : '';
+});
+
+// ── Expandable: Change Password ────────────────────────────
+
+const changePassRow  = document.getElementById('changePassRow');
+const changePassBody = document.getElementById('changePassBody');
+
+if (changePassRow) {
+  changePassRow.addEventListener('click', () => {
+    const open = changePassBody.classList.toggle('open');
+    changePassRow.classList.toggle('open', open);
+    if (!open) resetPasswordForm();
+  });
+}
+
+function resetPasswordForm() {
+  ['currentPw','newPw','confirmPw'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  updateStrengthUI('');
+  showInlineToast('', '', false);
+}
+
+// ── Save password ──────────────────────────────────────────
+
+const savePwBtn    = document.getElementById('savePwBtn');
+const cancelPwBtn  = document.getElementById('cancelPwBtn');
+
+if (savePwBtn) {
+  savePwBtn.addEventListener('click', () => {
+    const cur  = document.getElementById('currentPw').value;
+    const nw   = document.getElementById('newPw').value;
+    const conf = document.getElementById('confirmPw').value;
+
+    if (!cur || !nw || !conf) {
+      showInlineToast('pwToast', 'Please fill all fields', 'error'); return;
+    }
+    if (nw !== conf) {
+      showInlineToast('pwToast', 'Passwords do not match', 'error'); return;
+    }
+    if (calcStrength(nw) < 2) {
+      showInlineToast('pwToast', 'Password too weak — add numbers & symbols', 'error'); return;
+    }
+    // Simulate API call
+    savePwBtn.textContent = 'Updating…';
+    savePwBtn.disabled = true;
+    setTimeout(() => {
+      savePwBtn.textContent = 'Update Password';
+      savePwBtn.disabled = false;
+      showInlineToast('pwToast', '✓ Password updated successfully', 'success');
+      setTimeout(() => {
+        changePassBody.classList.remove('open');
+        changePassRow.classList.remove('open');
+        resetPasswordForm();
+      }, 1600);
+    }, 900);
+  });
+}
+
+if (cancelPwBtn) {
+  cancelPwBtn.addEventListener('click', () => {
+    changePassBody.classList.remove('open');
+    changePassRow.classList.remove('open');
+    resetPasswordForm();
+  });
+}
+
+function showInlineToast(id, msg, type) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  if (!msg) { el.classList.add('hidden'); return; }
+  el.textContent = msg;
+  el.className = 'inline-toast ' + type;
+}
+
+// ── Delete Account ─────────────────────────────────────────
+
+const deleteAccountRow = document.getElementById('deleteAccountRow');
+const deleteModal      = document.getElementById('deleteModal');
+const cancelDeleteBtn  = document.getElementById('cancelDeleteBtn');
+const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
+
+if (deleteAccountRow) {
+  deleteAccountRow.addEventListener('click', () => {
+    deleteModal.classList.remove('hidden');
+    setTimeout(() => document.getElementById('deleteConfirmPw')?.focus(), 200);
+  });
+}
+if (cancelDeleteBtn) {
+  cancelDeleteBtn.addEventListener('click', () => {
+    deleteModal.classList.add('hidden');
+    document.getElementById('deleteConfirmPw').value = '';
+  });
+}
+if (confirmDeleteBtn) {
+  confirmDeleteBtn.addEventListener('click', () => {
+    const pw = document.getElementById('deleteConfirmPw').value;
+    if (!pw) {
+      document.getElementById('deleteConfirmPw').focus();
+      document.getElementById('deleteConfirmPw').style.borderColor = '#f87171';
+      return;
+    }
+    confirmDeleteBtn.textContent = 'Deleting…';
+    confirmDeleteBtn.disabled = true;
+    setTimeout(() => {
+      deleteModal.classList.add('hidden');
+      showGlobalToast('Account deleted — goodbye.', 'error');
+      confirmDeleteBtn.textContent = 'Yes, Delete Everything';
+      confirmDeleteBtn.disabled = false;
+    }, 1200);
+  });
+}
+
+// Close modal on overlay click
+if (deleteModal) {
+  deleteModal.addEventListener('click', e => {
+    if (e.target === deleteModal) {
+      deleteModal.classList.add('hidden');
+      document.getElementById('deleteConfirmPw').value = '';
+    }
+  });
+}
+
+// ── Toggles ────────────────────────────────────────────────
+
+function setupToggle(id, onMsg, offMsg) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.addEventListener('change', () => {
+    showGlobalToast(el.checked ? onMsg : offMsg, 'success');
+  });
+}
+
+setupToggle('notifToggle',      'Notifications enabled',     'Notifications disabled');
+setupToggle('onlineStatusToggle','Online status visible',    'Online status hidden');
+setupToggle('searchableToggle', 'Searchable by usertag',    'Hidden from search');
+setupToggle('hiddenToggle',     'Hidden from discovery',    'Visible in discovery');
+
+// ── Theme switcher ─────────────────────────────────────────
+
+const themeSwitcher  = document.getElementById('themeSwitcher');
+const themeSubLabel  = document.getElementById('themeSubLabel');
+
+if (themeSwitcher) {
+  themeSwitcher.querySelectorAll('.theme-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      themeSwitcher.querySelectorAll('.theme-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const t = btn.dataset.theme;
+      themeSubLabel.textContent = t === 'dark' ? 'Dark mode active' : 'Light mode active';
+      showGlobalToast(t === 'dark' ? 'Dark theme applied' : 'Light theme applied', 'success');
+      // Placeholder: real theme toggle would swap CSS variables
+    });
+  });
+}
+
+// ── Avatar picker ──────────────────────────────────────────
+
+const avatarEditBtn  = document.getElementById('avatarEditBtn');
+const avatarModal    = document.getElementById('avatarModal');
+const cancelAvatarBtn= document.getElementById('cancelAvatarBtn');
+const saveAvatarBtn  = document.getElementById('saveAvatarBtn');
+const avatarInput    = document.getElementById('avatarInput');
+const settingsAvatar = document.getElementById('settingsAvatar');
+const selfAvatar     = document.querySelector('.self-avatar');
+
+let pendingAvatarClass = 'av-0';
+let pendingAvatarImg   = null;
+
+if (avatarEditBtn) {
+  avatarEditBtn.addEventListener('click', () => {
+    avatarModal.classList.remove('hidden');
+  });
+}
+
+if (avatarModal) {
+  avatarModal.querySelectorAll('.ap-option[data-class]').forEach(opt => {
+    opt.addEventListener('click', () => {
+      avatarModal.querySelectorAll('.ap-option').forEach(o => o.classList.remove('active'));
+      opt.classList.add('active');
+      pendingAvatarClass = opt.dataset.class;
+      pendingAvatarImg   = null;
+    });
+  });
+
+  const uploadBtn = document.getElementById('uploadAvatarBtn');
+  if (uploadBtn) {
+    uploadBtn.addEventListener('click', () => avatarInput.click());
+  }
+
+  avatarInput.addEventListener('change', e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      pendingAvatarImg = ev.target.result;
+      avatarModal.querySelectorAll('.ap-option').forEach(o => o.classList.remove('active'));
+      uploadBtn.classList.add('active');
+      const swatch = uploadBtn.querySelector('.ap-swatch');
+      swatch.innerHTML = `<img src="${pendingAvatarImg}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" />`;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+if (cancelAvatarBtn) {
+  cancelAvatarBtn.addEventListener('click', () => avatarModal.classList.add('hidden'));
+}
+
+if (saveAvatarBtn) {
+  saveAvatarBtn.addEventListener('click', () => {
+    if (pendingAvatarImg) {
+      settingsAvatar.innerHTML = `<img src="${pendingAvatarImg}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" />`;
+      if (selfAvatar) { selfAvatar.innerHTML = settingsAvatar.innerHTML; selfAvatar.className = 'user-avatar self-avatar'; }
+    } else {
+      const cl = ['av-0','av-1','av-2','av-3','av-4','av-5'];
+      settingsAvatar.className = `profile-avatar ${pendingAvatarClass}`;
+      settingsAvatar.textContent = 'Y';
+      if (selfAvatar) { selfAvatar.className = `user-avatar self-avatar ${pendingAvatarClass}`; selfAvatar.textContent = 'Y'; }
+    }
+    avatarModal.classList.add('hidden');
+    showGlobalToast('Avatar updated', 'success');
+  });
+}
+
+if (avatarModal) {
+  avatarModal.addEventListener('click', e => {
+    if (e.target === avatarModal) avatarModal.classList.add('hidden');
+  });
+}
+
+// ── Global toast ───────────────────────────────────────────
+
+let toastTimeout = null;
+function showGlobalToast(msg, type = 'success') {
+  const el = document.getElementById('globalToast');
+  if (!el) return;
+  clearTimeout(toastTimeout);
+  el.textContent = msg;
+  el.className = `global-toast ${type}`;
+  toastTimeout = setTimeout(() => el.classList.add('hidden'), 2800);
+}
+
+// ── Keyboard: close modals on Escape ──────────────────────
+
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  document.getElementById('deleteModal')?.classList.add('hidden');
+  document.getElementById('avatarModal')?.classList.add('hidden');
+});
