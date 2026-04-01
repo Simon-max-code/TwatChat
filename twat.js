@@ -784,3 +784,146 @@ document.addEventListener('keydown', e => {
   document.getElementById('deleteModal')?.classList.add('hidden');
   document.getElementById('avatarModal')?.classList.add('hidden');
 });
+
+
+
+
+
+
+
+
+
+
+
+
+// ============================================================
+// FRIEND PROFILE MODAL
+// ============================================================
+ 
+const profileModal     = document.getElementById('profileModal');
+const profileModalBox  = document.getElementById('profileModalBox');
+const profileModalClose= document.getElementById('profileModalClose');
+const pmAvatar         = document.getElementById('pmAvatar');
+const pmAvatarRing     = document.getElementById('pmAvatarRing');
+const pmGlow           = document.getElementById('pmGlow');
+const profileModalTag  = document.getElementById('profileModalTag');
+const pmCopyBtn        = document.getElementById('pmCopyBtn');
+const pmCopyLabel      = document.querySelector('.pm-copy-label');
+const pmMessageBtn     = document.getElementById('pmMessageBtn');
+ 
+// Glow colours that match each avatar gradient
+const GLOW_COLORS = {
+  'av-0': '#00d4ff',
+  'av-1': '#a855f7',
+  'av-2': '#f43f5e',
+  'av-3': '#fbbf24',
+  'av-4': '#22d3a5',
+  'av-5': '#fb923c',
+};
+ 
+function openProfileModal(user) {
+  // Populate avatar
+  pmAvatar.className = `pm-avatar ${user.avatarClass}`;
+  pmAvatar.textContent = user.initials;
+ 
+  // Populate usertag
+  profileModalTag.textContent = user.usertag;
+ 
+  // Colour the glow to match avatar
+  const glowColor = GLOW_COLORS[user.avatarClass] || '#00d4ff';
+  pmGlow.style.background = glowColor;
+ 
+  // Wire message button to open chat and close modal
+  pmMessageBtn.onclick = () => {
+    closeProfileModal();
+    // Switch to chats view if not already there
+    const chatsTab = document.querySelector('[data-view="view-chats"]');
+    if (chatsTab) chatsTab.click();
+    // Small delay so view transition completes first
+    setTimeout(() => openChat(user.id), 60);
+  };
+ 
+  // Reset copy button
+  resetCopyBtn();
+ 
+  // Show
+  profileModal.classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+}
+ 
+function closeProfileModal() {
+  profileModal.classList.add('hidden');
+  document.body.style.overflow = '';
+}
+ 
+function resetCopyBtn() {
+  if (!pmCopyLabel) return;
+  pmCopyLabel.textContent = 'Copy';
+  pmCopyBtn.classList.remove('copied');
+}
+ 
+// ── Trigger: click on a sidebar avatar ────────────────────
+// We delegate from chatList since items are dynamically rendered
+chatListEl.addEventListener('click', e => {
+  const avatarWrap = e.target.closest('.ci-avatar-wrap');
+  if (!avatarWrap) return;
+  const chatItem = avatarWrap.closest('.chat-item');
+  if (!chatItem) return;
+  e.stopPropagation(); // Don't also open the chat
+  const user = getUserById(Number(chatItem.dataset.id));
+  if (user) openProfileModal(user);
+});
+ 
+// ── Trigger: click on the in-chat header avatar ────────────
+const chatHeaderAvatarEl = document.getElementById('chatHeaderAvatar');
+if (chatHeaderAvatarEl) {
+  chatHeaderAvatarEl.addEventListener('click', () => {
+    if (activeUserId === null) return;
+    const user = getUserById(activeUserId);
+    if (user) openProfileModal(user);
+  });
+  chatHeaderAvatarEl.addEventListener('keydown', e => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      chatHeaderAvatarEl.click();
+    }
+  });
+}
+ 
+// ── Close: button ──────────────────────────────────────────
+if (profileModalClose) {
+  profileModalClose.addEventListener('click', closeProfileModal);
+}
+ 
+// ── Close: click outside ───────────────────────────────────
+if (profileModal) {
+  profileModal.addEventListener('click', e => {
+    if (e.target === profileModal) closeProfileModal();
+  });
+}
+ 
+// ── Close: Escape key ──────────────────────────────────────
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && !profileModal.classList.contains('hidden')) {
+    closeProfileModal();
+  }
+});
+ 
+// ── Copy usertag ───────────────────────────────────────────
+if (pmCopyBtn) {
+  pmCopyBtn.addEventListener('click', () => {
+    const tag = profileModalTag.textContent;
+    if (!tag) return;
+    navigator.clipboard.writeText(tag).then(() => {
+      pmCopyLabel.textContent = 'Copied!';
+      pmCopyBtn.classList.add('copied');
+      setTimeout(resetCopyBtn, 2000);
+    }).catch(() => {
+      // Fallback for browsers without clipboard API
+      pmCopyLabel.textContent = 'Copied!';
+      pmCopyBtn.classList.add('copied');
+      setTimeout(resetCopyBtn, 2000);
+    });
+  });
+}
+ 

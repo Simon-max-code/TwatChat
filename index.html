@@ -524,6 +524,52 @@
     </div>
   </div>
 
+
+<!-- ========== FRIEND PROFILE MODAL ========== -->
+  <div class="modal-overlay hidden" id="profileModal" role="dialog" aria-modal="true" aria-labelledby="profileModalTag">
+    <div class="profile-modal-box" id="profileModalBox">
+ 
+      <!-- Close button -->
+      <button class="profile-modal-close" id="profileModalClose" aria-label="Close profile">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+ 
+      <!-- Decorative backdrop glow -->
+      <div class="pm-glow" id="pmGlow"></div>
+ 
+      <!-- Avatar -->
+      <div class="pm-avatar-wrap">
+        <div class="pm-avatar-ring" id="pmAvatarRing">
+          <div class="pm-avatar" id="pmAvatar"></div>
+        </div>
+        <!-- Orbiting ring decoration -->
+        <div class="pm-orbit"></div>
+      </div>
+ 
+      <!-- Usertag -->
+      <div class="pm-tag-wrap">
+        <span class="pm-tag" id="profileModalTag"></span>
+        <button class="pm-copy-btn" id="pmCopyBtn" title="Copy usertag">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+          </svg>
+          <span class="pm-copy-label">Copy</span>
+        </button>
+      </div>
+        <!-- Message button -->
+      <button class="pm-message-btn" id="pmMessageBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" width="15" height="15">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+        </svg>
+        Message
+      </button>
+ 
+    </div>
+  </div>
+
+
   <!-- ========== GLOBAL TOAST ========== -->
   <div class="global-toast hidden" id="globalToast"></div>
 
