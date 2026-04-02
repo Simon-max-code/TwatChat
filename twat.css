@@ -604,8 +604,8 @@ input  { font-family: inherit; outline: none; border: none; background: none; co
    ============================================================ */
 @media (max-width: 680px) {
   .app-shell { overflow: hidden; }
-  .sidebar { position: absolute; inset: 0; width: 100%; z-index: 10; transition: transform 0.3s cubic-bezier(0.4,0,0.2,1); }
-  .sidebar.hidden-mobile { transform: translateX(-100%); pointer-events: none; }
+  .sidebar { position: absolute; inset: 0; width: 100%; z-index: 10; }
+  .sidebar.hidden-mobile { display: none; }
   .content-area { position: absolute; inset: 0; z-index: 5; }
   .back-btn { display: flex !important; }
   .message  { max-width: 84%; }
