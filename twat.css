@@ -1159,7 +1159,7 @@ input  { font-family: inherit; outline: none; border: none; background: none; co
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-lg);
   box-shadow: 0 16px 48px rgba(0,0,0,0.75), 0 0 0 1px rgba(0,212,255,0.06);
-  z-index: 300;
+  z-index: 1000;
   overflow: hidden;
   /* Entry animation */
   transform-origin: top right;
