@@ -708,7 +708,7 @@ function switchTab(targetViewId, clickedTab) {
   if (targetView) targetView.classList.add('active');
 
   if (window.innerWidth <= 680) {
-    if (targetViewId === 'view-chats' || targetViewId === 'view-rightnow') {
+    if (targetViewId === 'view-chats' || targetViewId === 'view-right-now') {
       if (activeUserId === null && activeGroupId === null) {
         sidebar.classList.remove('hidden-mobile');
       } else {
