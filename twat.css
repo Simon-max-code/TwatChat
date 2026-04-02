@@ -348,6 +348,7 @@ input  { font-family: inherit; outline: none; border: none; background: none; co
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
   position: relative; /* needed for dropdown positioning */
+  z-index: 30; /* keep header dropdown above messages */
 }
 .back-btn {
   display: none; width: 32px; height: 32px;
