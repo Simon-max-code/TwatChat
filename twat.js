@@ -20,6 +20,8 @@ const USERS = [
     online: true,
     unread: 3,
     lastTime: '10:42',
+    muted: false,
+    blocked: false,
     messages: [
       { from: 'them', text: 'Hey! Did you check out the new design system?', time: '10:30' },
       { from: 'me',   text: 'Yeah, it\'s looking really clean. Love the token structure.', time: '10:31' },
@@ -39,6 +41,8 @@ const USERS = [
     online: true,
     unread: 1,
     lastTime: '09:58',
+    muted: false,
+    blocked: false,
     messages: [
       { from: 'me',   text: 'Hey, you joining the standup?', time: '09:45' },
       { from: 'them', text: 'Already in. You\'re late 😂', time: '09:46' },
@@ -57,6 +61,8 @@ const USERS = [
     online: false,
     unread: 0,
     lastTime: 'Yesterday',
+    muted: false,
+    blocked: false,
     messages: [
       { from: 'them', text: 'Can you send me the wireframes when ready?', time: 'Yesterday' },
       { from: 'me',   text: 'Just exported them — check your email!', time: 'Yesterday' },
@@ -74,6 +80,8 @@ const USERS = [
     online: true,
     unread: 7,
     lastTime: '11:05',
+    muted: false,
+    blocked: false,
     messages: [
       { from: 'them', text: 'The client wants a demo by Friday 😬', time: '11:00' },
       { from: 'me',   text: 'That\'s in 3 days... what\'s the scope?', time: '11:01' },
@@ -93,6 +101,8 @@ const USERS = [
     online: false,
     unread: 0,
     lastTime: 'Mon',
+    muted: false,
+    blocked: false,
     messages: [
       { from: 'me',   text: 'Did the deployment go through?', time: 'Mon' },
       { from: 'them', text: 'Yep! Prod is green 🟢', time: 'Mon' },
@@ -110,6 +120,8 @@ const USERS = [
     online: true,
     unread: 2,
     lastTime: '08:30',
+    muted: false,
+    blocked: false,
     messages: [
       { from: 'them', text: 'Morning! Coffee first, then code ☕', time: '08:15' },
       { from: 'me',   text: 'Always. What are you working on today?', time: '08:17' },
@@ -183,9 +195,9 @@ const GROUPS = [
 // STATE
 // ============================================================
 
-let activeUserId   = null;   // ID of currently open DM
-let activeGroupId  = null;   // ID of currently open group
-let activeSidebarTab = 'dms'; // 'dms' | 'groups'
+let activeUserId   = null;
+let activeGroupId  = null;
+let activeSidebarTab = 'dms';
 let typingTimer    = null;
 let selectedGroupIcon = '🚀';
 let selectedMemberIds = new Set();
@@ -285,19 +297,24 @@ function renderChatList(filter = '') {
     const item = document.createElement('div');
     item.className = 'chat-item' + (user.id === activeUserId ? ' active' : '');
     item.dataset.id = user.id;
+
+    // Visual indicators for muted / blocked users
+    const muteTag  = user.muted   ? `<span style="font-size:10px;color:var(--text-muted);margin-left:4px;">🔕</span>` : '';
+    const blockTag = user.blocked ? `<span style="font-size:10px;color:#f87171;margin-left:4px;">🚫</span>` : '';
+
     item.innerHTML = `
       <div class="ci-avatar-wrap">
         <div class="ci-avatar ${user.avatarClass}">${user.initials}</div>
-        <span class="ci-status ${user.online ? 'online' : 'offline'}"></span>
+        <span class="ci-status ${user.online && !user.blocked ? 'online' : 'offline'}"></span>
       </div>
       <div class="ci-content">
         <div class="ci-top">
-          <span class="ci-name">${user.name}</span>
+          <span class="ci-name">${user.name}${muteTag}${blockTag}</span>
           <span class="ci-time">${user.lastTime}</span>
         </div>
         <div class="ci-bottom">
-          <span class="ci-preview">${preview}</span>
-          ${user.unread > 0 ? `<span class="ci-badge">${user.unread}</span>` : ''}
+          <span class="ci-preview">${user.blocked ? 'You blocked this user' : preview}</span>
+          ${user.unread > 0 && !user.muted ? `<span class="ci-badge">${user.unread}</span>` : ''}
         </div>
       </div>
     `;
@@ -365,6 +382,8 @@ function openChat(userId) {
   const user = getUserById(userId);
   if (!user) return;
 
+  closeChatContextMenu();
+  closeMsgSearchBar();
   clearTimeout(typingTimer);
   typingIndicator.classList.add('hidden');
 
@@ -387,6 +406,11 @@ function openChat(userId) {
 
   groupInfoBtn.classList.add('hidden');
 
+  // Show / hide the 3-dot menu button (only for DMs)
+  moreOptionsBtn.classList.remove('hidden');
+  // Reset menu button state
+  moreOptionsBtn.classList.remove('menu-open');
+
   emptyState.classList.add('hidden');
   activeChat.classList.remove('hidden');
 
@@ -394,7 +418,7 @@ function openChat(userId) {
 
   sidebar.classList.add('hidden-mobile');
 
-  if (user.online) scheduleFakeReply(user);
+  if (user.online && !user.blocked) scheduleFakeReply(user);
 
   msgInput.focus();
 }
@@ -407,6 +431,8 @@ function openGroupChat(groupId) {
   const group = getGroupById(groupId);
   if (!group) return;
 
+  closeChatContextMenu();
+  closeMsgSearchBar();
   clearTimeout(typingTimer);
   typingIndicator.classList.add('hidden');
 
@@ -424,11 +450,15 @@ function openGroupChat(groupId) {
   chatHeaderGroupAvatarInner.className = 'group-avatar-stack hdr';
 
   chatHeaderName.textContent = `${group.icon} ${group.name}`;
-  const memberCount = group.memberIds.length + 1; // +1 for "you"
+  const memberCount = group.memberIds.length + 1;
   chatHeaderStatus.textContent = `${memberCount} members`;
   chatHeaderStatus.className = 'chat-header-status';
 
   groupInfoBtn.classList.remove('hidden');
+
+  // Hide 3-dot menu for groups (not required by spec)
+  moreOptionsBtn.classList.add('hidden');
+  moreOptionsBtn.classList.remove('menu-open');
 
   emptyState.classList.add('hidden');
   activeChat.classList.remove('hidden');
@@ -437,7 +467,6 @@ function openGroupChat(groupId) {
 
   sidebar.classList.add('hidden-mobile');
 
-  // Simulate a random group member typing after a while
   scheduleGroupFakeReply(group);
 
   msgInput.focus();
@@ -449,18 +478,48 @@ function openGroupChat(groupId) {
 
 function renderMessages(user) {
   messagesArea.innerHTML = '';
-  const divider = document.createElement('div');
-  divider.className = 'date-divider';
-  divider.innerHTML = '<span>Today</span>';
-  messagesArea.appendChild(divider);
 
-  let prevFrom = null;
-  user.messages.forEach((msg, idx) => {
-    const isGap = prevFrom !== msg.from && idx > 0;
-    renderBubble(msg, user, isGap, false);
-    prevFrom = msg.from;
-  });
+  // Blocked overlay
+  const overlay = document.createElement('div');
+  overlay.className = 'blocked-overlay' + (user.blocked ? ' visible' : '');
+  overlay.innerHTML = `
+    <div class="blocked-overlay-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/>
+      </svg>
+    </div>
+    <h4>User Blocked</h4>
+    <p>You've blocked ${escapeHTML(user.name)}.<br/>Unblock from the ⋯ menu to resume messaging.</p>
+  `;
+  messagesArea.appendChild(overlay);
+
+  if (!user.blocked) {
+    const divider = document.createElement('div');
+    divider.className = 'date-divider';
+    divider.innerHTML = '<span>Today</span>';
+    messagesArea.appendChild(divider);
+
+    let prevFrom = null;
+    user.messages.forEach((msg, idx) => {
+      const isGap = prevFrom !== msg.from && idx > 0;
+      renderBubble(msg, user, isGap, false);
+      prevFrom = msg.from;
+    });
+  }
+
   scrollToBottom(false);
+
+  // Input disabled state for blocked users
+  updateInputBlockedState(user);
+}
+
+function updateInputBlockedState(user) {
+  const isBlocked = user && user.blocked;
+  msgInput.disabled      = isBlocked;
+  sendBtn.disabled       = isBlocked;
+  msgInput.placeholder   = isBlocked ? 'You blocked this user' : 'Type a message…';
+  msgInput.style.opacity = isBlocked ? '0.4' : '1';
+  sendBtn.style.opacity  = isBlocked ? '0.3' : '1';
 }
 
 function renderBubble(msg, user, gap = false, smooth = true) {
@@ -559,6 +618,8 @@ function sendMessage() {
 
 function sendDMMessage(text) {
   const user = getUserById(activeUserId);
+  if (!user || user.blocked) return;
+
   const msg = { from: 'me', text, time: now() };
   user.messages.push(msg);
   user.lastTime = now();
@@ -628,6 +689,7 @@ const GROUP_REPLIES = [
 
 function scheduleFakeReply(user) {
   if (user.id !== activeUserId) return;
+  if (user.blocked) return;
   clearTimeout(typingTimer);
 
   typingTimer = setTimeout(() => {
@@ -650,6 +712,11 @@ function scheduleFakeReply(user) {
 
       renderBubble(replyMsg, user, gap, true);
       renderChatList(searchInput.value);
+
+      // If muted, don't show unread badge
+      if (!user.muted) {
+        // unread already incremented via data; sidebar re-render handles badge
+      }
     }, 1500 + Math.random() * 1500);
 
   }, 1200 + Math.random() * 1400);
@@ -659,7 +726,6 @@ function scheduleGroupFakeReply(group) {
   if (group.id !== activeGroupId) return;
   clearTimeout(typingTimer);
 
-  // Pick a random member (not "me")
   const onlineMembers = group.memberIds.map(id => getUserById(id)).filter(u => u && u.online);
   if (!onlineMembers.length) return;
 
@@ -758,6 +824,8 @@ backBtn.addEventListener('click', () => {
   activeChat.classList.add('hidden');
   clearTimeout(typingTimer);
   typingIndicator.classList.add('hidden');
+  closeChatContextMenu();
+  closeMsgSearchBar();
   document.querySelectorAll('.chat-item').forEach(el => el.classList.remove('active'));
 });
 
@@ -787,12 +855,10 @@ function openNewGroupModal() {
   selectedGroupIcon = '🚀';
   selectedMemberIds = new Set();
 
-  // Reset icon picker
   groupIconPicker.querySelectorAll('.gip-btn').forEach(b => {
     b.classList.toggle('active', b.dataset.icon === '🚀');
   });
 
-  // Populate member selector
   memberSelector.innerHTML = '';
   USERS.forEach(user => {
     const chip = document.createElement('button');
@@ -896,7 +962,6 @@ createGroupBtn.addEventListener('click', () => {
   closeNewGroupModal();
   showGlobalToast(`"${name}" created`, 'success');
 
-  // Auto-switch to groups tab and open the new group
   switchSidebarTab('groups');
   renderGroupList();
   openGroupChat(newGroup.id);
@@ -920,7 +985,6 @@ const giLeaveBtn     = document.getElementById('giLeaveBtn');
 const GI_GLOW_COLORS = ['#00d4ff','#a855f7','#f43f5e','#fbbf24','#22d3a5','#fb923c'];
 
 function openGroupInfoModal(group) {
-  // Build stacked avatar in modal
   giAvatar.innerHTML = buildGroupAvatarMini(group, 'lg');
   giAvatar.className = 'gi-avatar group-avatar-stack lg';
   giAvatar.innerHTML += `<span class="gi-icon-badge">${group.icon}</span>`;
@@ -931,9 +995,7 @@ function openGroupInfoModal(group) {
   giName.textContent = `${group.icon} ${group.name}`;
   giMeta.textContent = `${group.memberIds.length + 1} members · Created by You`;
 
-  // Build member list
   giMembers.innerHTML = '';
-  // "You" first
   const youRow = document.createElement('div');
   youRow.className = 'gi-member-row';
   youRow.innerHTML = `
@@ -1250,6 +1312,8 @@ document.addEventListener('keydown', e => {
   document.getElementById('profileModal')?.classList.add('hidden');
   closeNewGroupModal();
   closeGroupInfoModal();
+  closeChatContextMenu();
+  closeMsgSearchBar();
 });
 
 // ============================================================
@@ -1340,6 +1404,409 @@ if (pmCopyBtn) {
 }
 
 // ============================================================
+// ============================================================
+// 3-DOT CONTEXT MENU — DM CHATS
+// ============================================================
+// ============================================================
+
+// ── DOM: locate the existing "More options" button and wrap it ──
+// The button is the last .hdr-btn inside .chat-header-actions.
+// We wrap it in a .hdr-menu-wrap div so the dropdown anchors to it.
+
+const chatHeaderActions = document.querySelector('.chat-header-actions');
+
+// Create the wrapper
+const menuWrap = document.createElement('div');
+menuWrap.className = 'hdr-menu-wrap';
+
+// Grab the existing 3-dot button (last hdr-btn child of actions)
+const moreOptionsBtn = chatHeaderActions.querySelector('.hdr-btn[title="More options"]');
+chatHeaderActions.removeChild(moreOptionsBtn);
+menuWrap.appendChild(moreOptionsBtn);
+
+// Build the dropdown
+const contextMenu = document.createElement('div');
+contextMenu.className = 'chat-context-menu hidden';
+contextMenu.id = 'chatContextMenu';
+contextMenu.innerHTML = `
+  <!-- ① Search Messages (inline search bar) -->
+  <div class="ccm-item" id="ccmSearch">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+    </svg>
+    Search Messages
+  </div>
+
+  <div class="ccm-divider"></div>
+
+  <!-- ② Mute Notifications -->
+  <div class="ccm-item" id="ccmMute">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+      <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+    </svg>
+    Mute Notifications
+    <span class="ccm-badge" id="ccmMuteBadge">Off</span>
+  </div>
+
+  <div class="ccm-divider"></div>
+
+  <!-- ③ Block User -->
+  <div class="ccm-item" id="ccmBlock">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <circle cx="12" cy="12" r="10"/>
+      <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/>
+    </svg>
+    Block User
+    <span class="ccm-badge" id="ccmBlockBadge">Off</span>
+  </div>
+
+  <div class="ccm-divider"></div>
+
+  <!-- ④ Clear Chat -->
+  <div class="ccm-item danger" id="ccmClear">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <polyline points="3 6 5 6 21 6"/>
+      <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+      <path d="M10 11v6M14 11v6"/>
+      <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+    </svg>
+    Clear Chat
+  </div>
+
+  <!-- ⑤ Delete Chat -->
+  <div class="ccm-item danger" id="ccmDelete">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+      <line x1="18" y1="9" x2="6" y2="9"/>
+    </svg>
+    Delete Chat
+  </div>
+`;
+
+menuWrap.appendChild(contextMenu);
+chatHeaderActions.insertBefore(menuWrap, chatHeaderActions.firstChild);
+
+// ── In-chat message search bar (injected below the chat header) ──
+const msgSearchBar = document.createElement('div');
+msgSearchBar.className = 'msg-search-bar';
+msgSearchBar.id = 'msgSearchBar';
+msgSearchBar.innerHTML = `
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+  </svg>
+  <input type="text" class="msg-search-bar-input" id="msgSearchInput" placeholder="Search in conversation…" autocomplete="off" />
+  <span class="msg-search-count-label" id="msgSearchCountLabel"></span>
+  <div class="msg-search-nav">
+    <button class="msg-search-nav-btn" id="msgSearchPrev" title="Previous">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        <path d="M15 18l-6-6 6-6"/>
+      </svg>
+    </button>
+    <button class="msg-search-nav-btn" id="msgSearchNext" title="Next">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        <path d="M9 18l6-6-6-6"/>
+      </svg>
+    </button>
+  </div>
+  <button class="msg-search-close" id="msgSearchClose" title="Close search">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+      <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+    </svg>
+  </button>
+`;
+
+// Insert after the chat header (first child of activeChat)
+const chatHeader = document.getElementById('chatHeader');
+chatHeader.insertAdjacentElement('afterend', msgSearchBar);
+
+// ── Search state ──
+let msgSearchMatches = [];   // DOM .message elements that matched
+let msgSearchCursor  = -1;   // current highlighted index
+
+const msgSearchInput      = document.getElementById('msgSearchInput');
+const msgSearchCountLabel = document.getElementById('msgSearchCountLabel');
+const msgSearchPrev       = document.getElementById('msgSearchPrev');
+const msgSearchNext       = document.getElementById('msgSearchNext');
+const msgSearchClose      = document.getElementById('msgSearchClose');
+
+// ── Open/Close helpers ──
+
+function openChatContextMenu() {
+  const user = getUserById(activeUserId);
+  if (!user) return;
+
+  // Sync toggle badges
+  const muteBadge  = document.getElementById('ccmMuteBadge');
+  const blockBadge = document.getElementById('ccmBlockBadge');
+
+  muteBadge.textContent  = user.muted   ? 'On'  : 'Off';
+  muteBadge.className    = 'ccm-badge'  + (user.muted   ? ' active'       : '');
+  blockBadge.textContent = user.blocked ? 'On'  : 'Off';
+  blockBadge.className   = 'ccm-badge'  + (user.blocked ? ' danger-active' : '');
+
+  // Update block item label dynamically
+  document.getElementById('ccmBlock').childNodes[2].textContent =
+    user.blocked ? 'Unblock User' : 'Block User';
+
+  contextMenu.classList.remove('hidden');
+  moreOptionsBtn.classList.add('menu-open');
+}
+
+function closeChatContextMenu() {
+  contextMenu.classList.add('hidden');
+  moreOptionsBtn.classList.remove('menu-open');
+}
+
+function closeMsgSearchBar() {
+  msgSearchBar.classList.remove('visible');
+  msgSearchInput.value = '';
+  clearMsgSearchHighlights();
+  msgSearchMatches = [];
+  msgSearchCursor  = -1;
+  msgSearchCountLabel.textContent = '';
+}
+
+// ── Toggle the menu on 3-dot click ──
+moreOptionsBtn.addEventListener('click', e => {
+  e.stopPropagation();
+  if (activeUserId === null) return; // only for DMs
+  const isOpen = !contextMenu.classList.contains('hidden');
+  if (isOpen) {
+    closeChatContextMenu();
+  } else {
+    openChatContextMenu();
+  }
+});
+
+// ── Close on outside click ──
+document.addEventListener('click', e => {
+  if (!contextMenu.classList.contains('hidden') && !menuWrap.contains(e.target)) {
+    closeChatContextMenu();
+  }
+});
+
+// ============================================================
+// MENU ACTION: ① Search Messages
+// ============================================================
+
+document.getElementById('ccmSearch').addEventListener('click', () => {
+  closeChatContextMenu();
+  msgSearchBar.classList.add('visible');
+  setTimeout(() => msgSearchInput.focus(), 60);
+});
+
+// Live search as user types
+msgSearchInput.addEventListener('input', () => {
+  runMsgSearch(msgSearchInput.value.trim());
+});
+
+msgSearchInput.addEventListener('keydown', e => {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    if (e.shiftKey) {
+      navigateMsgSearch(-1);
+    } else {
+      navigateMsgSearch(1);
+    }
+  }
+  if (e.key === 'Escape') closeMsgSearchBar();
+});
+
+msgSearchPrev.addEventListener('click', () => navigateMsgSearch(-1));
+msgSearchNext.addEventListener('click', () => navigateMsgSearch(1));
+msgSearchClose.addEventListener('click', closeMsgSearchBar);
+
+/**
+ * Searches all rendered .msg-bubble elements for the query string.
+ * Hides non-matching messages, highlights matches, scrolls to first.
+ */
+function runMsgSearch(query) {
+  clearMsgSearchHighlights();
+  msgSearchMatches = [];
+  msgSearchCursor  = -1;
+
+  if (!query) {
+    msgSearchCountLabel.textContent = '';
+    return;
+  }
+
+  const lower = query.toLowerCase();
+  const messages = messagesArea.querySelectorAll('.message');
+
+  messages.forEach(msgEl => {
+    const bubble = msgEl.querySelector('.msg-bubble');
+    if (!bubble) return;
+    const text = bubble.textContent || '';
+
+    if (text.toLowerCase().includes(lower)) {
+      msgEl.classList.remove('search-hidden');
+      msgEl.classList.add('search-match');
+      // Highlight matching text
+      bubble.innerHTML = highlightText(escapeHTML(text), escapeHTML(query));
+      msgSearchMatches.push(msgEl);
+    } else {
+      msgEl.classList.add('search-hidden');
+      msgEl.classList.remove('search-match');
+    }
+  });
+
+  if (msgSearchMatches.length) {
+    msgSearchCursor = 0;
+    scrollToMatch(0);
+    updateSearchCountLabel();
+  } else {
+    msgSearchCountLabel.textContent = 'No results';
+  }
+}
+
+/**
+ * Wraps matched text in <mark> tags for highlighting.
+ */
+function highlightText(safeText, safeQuery) {
+  // Case-insensitive replace on the safe (HTML-escaped) text
+  const regex = new RegExp(safeQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+  return safeText.replace(regex, m => `<mark>${m}</mark>`);
+}
+
+function clearMsgSearchHighlights() {
+  messagesArea.querySelectorAll('.message').forEach(msgEl => {
+    msgEl.classList.remove('search-hidden', 'search-match');
+    const bubble = msgEl.querySelector('.msg-bubble');
+    if (bubble && bubble.querySelector('mark')) {
+      // Re-render plain text (strip marks)
+      bubble.innerHTML = bubble.textContent || '';
+    }
+  });
+}
+
+function navigateMsgSearch(direction) {
+  if (!msgSearchMatches.length) return;
+  msgSearchCursor = (msgSearchCursor + direction + msgSearchMatches.length) % msgSearchMatches.length;
+  scrollToMatch(msgSearchCursor);
+  updateSearchCountLabel();
+}
+
+function scrollToMatch(idx) {
+  // Remove active highlight from all
+  msgSearchMatches.forEach(el => el.style.outline = '');
+  const target = msgSearchMatches[idx];
+  if (!target) return;
+  target.style.outline = '2px solid var(--cyan)';
+  target.style.outlineOffset = '3px';
+  target.scrollIntoView({ block: 'center', behavior: 'smooth' });
+}
+
+function updateSearchCountLabel() {
+  if (!msgSearchMatches.length) {
+    msgSearchCountLabel.textContent = 'No results';
+    return;
+  }
+  msgSearchCountLabel.textContent = `${msgSearchCursor + 1} / ${msgSearchMatches.length}`;
+}
+
+// ============================================================
+// MENU ACTION: ② Mute Notifications
+// ============================================================
+
+document.getElementById('ccmMute').addEventListener('click', () => {
+  const user = getUserById(activeUserId);
+  if (!user) return;
+
+  user.muted = !user.muted;
+
+  closeChatContextMenu();
+  renderChatList(searchInput.value);
+  showGlobalToast(
+    user.muted ? `🔕 ${user.name} muted` : `🔔 ${user.name} unmuted`,
+    'success'
+  );
+});
+
+// ============================================================
+// MENU ACTION: ③ Block / Unblock User
+// ============================================================
+
+document.getElementById('ccmBlock').addEventListener('click', () => {
+  const user = getUserById(activeUserId);
+  if (!user) return;
+
+  user.blocked = !user.blocked;
+
+  // If blocking, also stop any fake reply in progress
+  if (user.blocked) {
+    clearTimeout(typingTimer);
+    typingIndicator.classList.add('hidden');
+  }
+
+  closeChatContextMenu();
+
+  // Re-render the chat to show/hide the blocked overlay
+  renderMessages(user);
+  renderChatList(searchInput.value);
+
+  showGlobalToast(
+    user.blocked ? `🚫 ${user.name} blocked` : `✓ ${user.name} unblocked`,
+    user.blocked ? 'error' : 'success'
+  );
+});
+
+// ============================================================
+// MENU ACTION: ④ Clear Chat
+// ============================================================
+
+document.getElementById('ccmClear').addEventListener('click', () => {
+  const user = getUserById(activeUserId);
+  if (!user) return;
+
+  closeChatContextMenu();
+
+  // Confirm with a quick in-place toast then clear
+  showGlobalToast('Clearing chat…', 'error');
+
+  setTimeout(() => {
+    user.messages = [];
+    user.lastTime = now();
+    renderMessages(user);
+    renderChatList(searchInput.value);
+    showGlobalToast('Chat cleared', 'success');
+  }, 400);
+});
+
+// ============================================================
+// MENU ACTION: ⑤ Delete Chat
+// ============================================================
+
+document.getElementById('ccmDelete').addEventListener('click', () => {
+  const user = getUserById(activeUserId);
+  if (!user) return;
+
+  closeChatContextMenu();
+
+  showGlobalToast(`Deleting chat with ${user.name}…`, 'error');
+
+  setTimeout(() => {
+    // Remove user from list entirely
+    const idx = USERS.indexOf(user);
+    if (idx > -1) USERS.splice(idx, 1);
+
+    // Reset the chat view
+    activeUserId = null;
+    clearTimeout(typingTimer);
+    typingIndicator.classList.add('hidden');
+    closeMsgSearchBar();
+    emptyState.classList.remove('hidden');
+    activeChat.classList.add('hidden');
+
+    // On mobile, show sidebar again
+    sidebar.classList.remove('hidden-mobile');
+
+    renderChatList(searchInput.value);
+    showGlobalToast('Chat deleted', 'success');
+  }, 500);
+});
+
+// ============================================================
 // INIT
 // ============================================================
 
@@ -1347,7 +1814,6 @@ function init() {
   switchSidebarTab('dms');
   renderChatList();
   renderGroupList();
-  // new group btn starts subtle for DMs tab
   newGroupBtn.style.opacity = '0.4';
   newGroupBtn.style.pointerEvents = 'none';
 }
