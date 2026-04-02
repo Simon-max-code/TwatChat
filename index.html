@@ -36,7 +36,7 @@
         </button>
         <button class="sidebar-tab" id="tabGroups" data-tab="groups">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-          Groups
+          chatrooms 
         </button>
         <button class="new-group-btn" id="newGroupBtn" title="New Group">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" width="15" height="15"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
@@ -565,18 +565,18 @@
   <!-- ========== NEW GROUP MODAL ========== -->
   <div class="modal-overlay hidden" id="newGroupModal" role="dialog" aria-modal="true">
     <div class="modal-box new-group-modal-box">
-      <h3 class="modal-title">New Group</h3>
-      <p class="modal-body" style="margin-bottom:18px;">Name your group and pick members</p>
+      <h3 class="modal-title">Add chatroom</h3>
+      <p class="modal-body" style="margin-bottom:18px;">Name your chatroom and pick members</p>
 
       <!-- Group name input -->
       <div class="input-group" style="margin-bottom:14px;">
-        <label class="input-label">Group Name</label>
+        <label class="input-label">Chatroom Name</label>
         <input type="text" class="settings-input" id="newGroupName" placeholder="e.g. Design Squad" maxlength="40" style="padding:10px 14px;" />
       </div>
 
       <!-- Group icon picker -->
       <div class="input-group" style="margin-bottom:14px;">
-        <label class="input-label">Group Icon</label>
+        <label class="input-label">Identity</label>
         <div class="group-icon-picker" id="groupIconPicker">
           <button class="gip-btn active" data-icon="🚀">🚀</button>
           <button class="gip-btn" data-icon="🎨">🎨</button>
@@ -602,7 +602,7 @@
 
       <div class="modal-actions" style="margin-top:18px;">
         <button class="action-btn ghost" id="cancelNewGroupBtn">Cancel</button>
-        <button class="action-btn primary" id="createGroupBtn">Create Group</button>
+        <button class="action-btn primary" id="createGroupBtn">Create Chatroom</button>
       </div>
     </div>
   </div>
