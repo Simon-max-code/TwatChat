@@ -708,12 +708,14 @@ function switchTab(targetViewId, clickedTab) {
   if (targetView) targetView.classList.add('active');
 
   if (window.innerWidth <= 680) {
-    if (targetViewId !== 'view-chats') {
-      sidebar.classList.add('hidden-mobile');
-    } else {
+    if (targetViewId === 'view-chats' || targetViewId === 'view-rightnow') {
       if (activeUserId === null && activeGroupId === null) {
         sidebar.classList.remove('hidden-mobile');
+      } else {
+        sidebar.classList.add('hidden-mobile');
       }
+    } else {
+      sidebar.classList.add('hidden-mobile');
     }
   }
 }
