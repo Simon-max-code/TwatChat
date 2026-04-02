@@ -36,7 +36,7 @@
         </button>
         <button class="sidebar-tab" id="tabGroups" data-tab="groups">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-          chatrooms 
+          Groups
         </button>
         <button class="new-group-btn" id="newGroupBtn" title="New Group">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" width="15" height="15"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
@@ -159,19 +159,6 @@
           <p>Your tunes will live here.<br/>Coming soon.</p>
         </div>
       </div>
-
- <!-- right-now VIEW -->
-      <div class="view" id="view-right-now">
-        <div class="placeholder-view">
-          <div class="ph-icon">
-           <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M21 12a9 9 0 1 1-3-6.7"/>
-         <circle cx="12" cy="12" r="3"/>
-         </svg>
-          </div>
-          <h2>Right Now</h2>
-          <p>live,status updates appear here'<br/>Coming soon.</p>
-        </div>
 
       <!-- CALLS VIEW -->
       <div class="view" id="view-calls">
@@ -472,13 +459,6 @@
       </svg>
       <span>Music</span>
     </button>
-    <button class="nav-tab" data-view="view-right-now">
-      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-     <path d="M21 12a9 9 0 1 1-3-6.7"/>
-      <circle cx="12" cy="12" r="3"/>
-     </svg>
-      <span>Right now</span>
-    </button>
     <button class="nav-tab" data-view="view-calls">
       <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.41 2 2 0 0 1 3.59 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.56a16 16 0 0 0 6.29 6.29l.97-.97a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/>
@@ -578,18 +558,18 @@
   <!-- ========== NEW GROUP MODAL ========== -->
   <div class="modal-overlay hidden" id="newGroupModal" role="dialog" aria-modal="true">
     <div class="modal-box new-group-modal-box">
-      <h3 class="modal-title">Add chatroom</h3>
-      <p class="modal-body" style="margin-bottom:18px;">Name your chatroom and pick members</p>
+      <h3 class="modal-title">New Group</h3>
+      <p class="modal-body" style="margin-bottom:18px;">Name your group and pick members</p>
 
       <!-- Group name input -->
       <div class="input-group" style="margin-bottom:14px;">
-        <label class="input-label">Chatroom Name</label>
+        <label class="input-label">Group Name</label>
         <input type="text" class="settings-input" id="newGroupName" placeholder="e.g. Design Squad" maxlength="40" style="padding:10px 14px;" />
       </div>
 
       <!-- Group icon picker -->
       <div class="input-group" style="margin-bottom:14px;">
-        <label class="input-label">Identity</label>
+        <label class="input-label">Group Icon</label>
         <div class="group-icon-picker" id="groupIconPicker">
           <button class="gip-btn active" data-icon="🚀">🚀</button>
           <button class="gip-btn" data-icon="🎨">🎨</button>
@@ -615,7 +595,7 @@
 
       <div class="modal-actions" style="margin-top:18px;">
         <button class="action-btn ghost" id="cancelNewGroupBtn">Cancel</button>
-        <button class="action-btn primary" id="createGroupBtn">Create Chatroom</button>
+        <button class="action-btn primary" id="createGroupBtn">Create Group</button>
       </div>
     </div>
   </div>
