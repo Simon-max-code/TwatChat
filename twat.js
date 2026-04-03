@@ -7,11 +7,18 @@
 'use strict';
 
 
-const bottomNav = document.querySelector('.bottom-nav');
-
-function hideNav() { bottomNav.style.transform = 'translateX(-50%) translateY(120%)'; bottomNav.style.opacity = '0'; bottomNav.style.pointerEvents = 'none'; }
-function showNav() { bottomNav.style.transform = ''; bottomNav.style.opacity = ''; bottomNav.style.pointerEvents = ''; }
-
+function hideNav() {
+  if (window.innerWidth > 680) return;
+  bottomNav.style.transform = 'translateX(-50%) translateY(calc(100% + 26px))';
+  bottomNav.style.opacity = '0';
+  bottomNav.style.pointerEvents = 'none';
+}
+function showNav() {
+  if (window.innerWidth > 680) return;
+  bottomNav.style.transform = 'translateX(-50%) translateY(0)';
+  bottomNav.style.opacity = '1';
+  bottomNav.style.pointerEvents = '';
+}
 
 
 // ============================================================
