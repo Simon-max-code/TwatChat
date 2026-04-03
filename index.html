@@ -26,20 +26,26 @@
 
       <!-- Logo -->
       <div class="auth-logo">
-        <span class="auth-logo-glyph">
-          <svg viewBox="0 0 100 100" aria-hidden="true">
-            <defs>
-              <linearGradient id="logoGradientStroke" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stop-color="#7FD6FF" />
-                <stop offset="50%" stop-color="#A68BFE" />
-                <stop offset="100%" stop-color="#F3C5FF" />
-              </linearGradient>
-            </defs>
-            <circle class="bubble" cx="50" cy="50" r="40" />
-            <path class="lock" d="M36 52v-14a14 14 0 0 1 28 0v14" stroke="url(#logoGradientStroke)" stroke="#7FD6FF" stroke-width="4" fill="none" />
-            <rect class="lock" x="32" y="58" width="36" height="26" rx="5" ry="5" stroke="url(#logoGradientStroke)" stroke="#7FD6FF" stroke-width="4" fill="rgba(0,0,0,0.32)" />
-          </svg>
-        </span>
+       <div class="topbar-logo">
+      <span class="logo-glyph">
+        <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-label="TwatChat logo">
+          <defs>
+            <linearGradient id="gradientStroke" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#7FD6FF" />
+              <stop offset="100%" stop-color="#A98BFA" />
+            </linearGradient>
+          </defs>
+
+          <!-- chat bubble body -->
+          <path class="bubble" d="M18 20 H82 A8 8 0 0 1 90 28 V62 A8 8 0 0 1 82 70 H40 L24 86 V70 H18 A8 8 0 0 1 10 62 V28 A8 8 0 0 1 18 20 Z" />
+
+          <!-- lock inside bubble -->
+          <g class="lock" transform="translate(50 46)">
+            <rect x="-12" y="7" width="24" height="18" rx="3" />
+            <path d="M-7 7 v-8 a7 7 0 0 1 14 0 v8" />
+          </g>
+        </svg>
+      </span>
         <span class="auth-logo-text">TwatChat</span>
       </div>
       <p class="auth-tagline">Where conversations get interesting.</p>
@@ -228,19 +234,24 @@
        TOP BAR
        ============================================================ -->
   <header class="topbar">
-    <div class="topbar-logo">
+   <div class="topbar-logo">
       <span class="logo-glyph">
-        <svg viewBox="0 0 100 100" aria-hidden="true">
+        <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-label="TwatChat logo">
           <defs>
-            <linearGradient id="logoGradientStroke" x1="0%" y1="0%" x2="100%" y2="100%">
+            <linearGradient id="gradientStroke" x1="0%" y1="0%" x2="100%" y2="100%">
               <stop offset="0%" stop-color="#7FD6FF" />
-              <stop offset="50%" stop-color="#A68BFE" />
-              <stop offset="100%" stop-color="#F3C5FF" />
+              <stop offset="100%" stop-color="#A98BFA" />
             </linearGradient>
           </defs>
-          <circle class="bubble" cx="50" cy="50" r="40" />
-          <path class="lock" d="M36 52v-14a14 14 0 0 1 28 0v14" stroke="url(#logoGradientStroke)" stroke="#7FD6FF" stroke-width="4" fill="none" />
-          <rect class="lock" x="32" y="58" width="36" height="26" rx="5" ry="5" stroke="url(#logoGradientStroke)" stroke="#7FD6FF" stroke-width="4" fill="rgba(0,0,0,0.32)" />
+
+          <!-- chat bubble body -->
+          <path class="bubble" d="M18 20 H82 A8 8 0 0 1 90 28 V62 A8 8 0 0 1 82 70 H40 L24 86 V70 H18 A8 8 0 0 1 10 62 V28 A8 8 0 0 1 18 20 Z" />
+
+          <!-- lock inside bubble -->
+          <g class="lock" transform="translate(50 46)">
+            <rect x="-12" y="7" width="24" height="18" rx="3" />
+            <path d="M-7 7 v-8 a7 7 0 0 1 14 0 v8" />
+          </g>
         </svg>
       </span>
       <span class="logo-text">TwatChat</span>

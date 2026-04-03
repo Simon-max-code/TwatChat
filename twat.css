@@ -87,57 +87,34 @@ input  { font-family: inherit; outline: none; border: none; background: none; co
 
 .topbar-logo { display: flex; align-items: center; gap: 8px; }
 .logo-glyph {
-  width: 40px;
-  height: 40px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  width: 38px;
+  height: 38px;
   color: var(--cyan);
-  filter: drop-shadow(0 0 8px rgba(127,214,255,0.75)) drop-shadow(0 0 16px rgba(167,139,250,0.45));
+  filter: drop-shadow(0 0 8px var(--cyan));
   animation: pulse-glow 3s ease-in-out infinite;
 }
 .logo-glyph svg {
   width: 100%;
   height: 100%;
-  overflow: visible;
 }
-.auth-logo-glyph {
-  width: 34px;
-  height: 34px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-.auth-logo-glyph svg {
-  width: 100%;
-  height: 100%;
-  overflow: visible;
-}
-.logo-glyph .bubble,
-.auth-logo-glyph .bubble {
-  fill: rgba(255,255,255,0.12);
-  stroke: url(#logoGradientStroke);
-  stroke-width: 4;
-}
-.logo-glyph .lock,
-.auth-logo-glyph .lock {
-  stroke: url(#logoGradientStroke);
+
+.logo-glyph .bubble {
+  fill: rgba(255, 255, 255, 0.06);
+  stroke: url(#gradientStroke);
   stroke-width: 3;
-  fill: none;
-  stroke-linecap: round;
-  stroke-linejoin: round;
 }
+
 .logo-glyph .lock {
-  stroke: #7fd6ff;
-}
-.logo-glyph .lock,
-.auth-logo-glyph .lock {
-  stroke: url(#logoGradientStroke);
+  stroke: url(#gradientStroke);
   stroke-width: 2.5;
   fill: none;
   stroke-linecap: round;
   stroke-linejoin: round;
 }
+
 @keyframes pulse-glow {
   0%, 100% { filter: drop-shadow(0 0 6px var(--cyan)); opacity: 0.9; }
   50%       { filter: drop-shadow(0 0 16px var(--cyan)); opacity: 1; }
