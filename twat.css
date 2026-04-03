@@ -111,7 +111,7 @@ input  { font-family: inherit; outline: none; border: none; background: none; co
 
 .logo-glyph .lock {
   stroke: url(#gradientStroke);
-  stroke-width: 2.5;
+  stroke-width: 3;
   fill: none;
   stroke-linecap: round;
   stroke-linejoin: round;
