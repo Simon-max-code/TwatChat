@@ -6,6 +6,7 @@
 
 'use strict';
 
+const bottomNav = document.querySelector('.bottom-nav');
 
 function hideNav() {
   if (window.innerWidth > 680) return;
