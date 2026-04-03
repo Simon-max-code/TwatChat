@@ -11,7 +11,19 @@
   <link rel="stylesheet" href="auth.css"/>
 </head>
 <body>
-
+<!-- Place once, right after <body> opens -->
+<svg width="0" height="0" style="position:absolute">
+  <defs>
+    <linearGradient id="gradientStroke" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#7FD6FF" />
+      <stop offset="100%" stop-color="#A98BFA" />
+    </linearGradient>
+    <filter id="glowFilter">
+      <feGaussianBlur stdDeviation="1.5" result="blur" />
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+</svg>
   <!-- ============================================================
        AUTH GATE — shown until user signs up / logs in
        ============================================================ -->
@@ -26,27 +38,19 @@
 
       <!-- Logo -->
       <div class="auth-logo">
-        <span class="auth-logo-glyph">
-          <svg viewBox="0 0 100 100" aria-label="TwatChat logo">
-            <defs>
-              <linearGradient id="gradientStroke" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stop-color="#7FD6FF" />
-                <stop offset="100%" stop-color="#A98BFA" />
-              </linearGradient>
-            </defs>
-
-            <!-- chat bubble body -->
-            <path class="bubble" d="M18 20 H82 A8 8 0 0 1 90 28 V62 A8 8 0 0 1 82 70 H40 L24 86 V70 H18 A8 8 0 0 1 10 62 V28 A8 8 0 0 1 18 20 Z" />
-
-            <!-- lock inside bubble -->
-            <g class="lock" transform="translate(50 46)">
-              <rect x="-12" y="7" width="24" height="18" rx="3" />
-              <path d="M-7 7 v-8 a7 7 0 0 1 14 0 v8" />
-            </g>
-          </svg>
-        </span>
-        <span class="auth-logo-text">TwatChat</span>
-      </div>
+  <span class="auth-logo-glyph">
+    <svg viewBox="0 0 100 100" aria-label="TwatChat logo">
+      <path class="bubble"
+        d="M15 22 H78 A10 10 0 0 1 88 32 V60 A10 10 0 0 1 78 70 H52 L34 88 V70 H15 A10 10 0 0 1 5 60 V32 A10 10 0 0 1 15 22 Z"
+        filter="url(#glowFilter)"
+      />
+      <rect class="lock" x="38" y="50" width="24" height="16" rx="3" />
+      <path class="lock" d="M43 50 V43 a7 7 0 0 1 14 0 V50" />
+      <circle cx="50" cy="58" r="2" fill="url(#gradientStroke)" opacity="0.9" />
+    </svg>
+  </span>
+  <span class="auth-logo-text">TwatChat</span>
+</div>
       <p class="auth-tagline">Where conversations get interesting.</p>
 
       <!-- Tab switcher -->
@@ -233,28 +237,20 @@
        TOP BAR
        ============================================================ -->
   <header class="topbar">
-   <div class="topbar-logo">
-      <span class="logo-glyph">
-        <svg viewBox="0 0 100 100" aria-label="TwatChat logo">
-          <defs>
-            <linearGradient id="gradientStroke" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stop-color="#7FD6FF" />
-              <stop offset="100%" stop-color="#A98BFA" />
-            </linearGradient>
-          </defs>
-
-          <!-- chat bubble body -->
-          <path class="bubble" d="M18 20 H82 A8 8 0 0 1 90 28 V62 A8 8 0 0 1 82 70 H40 L24 86 V70 H18 A8 8 0 0 1 10 62 V28 A8 8 0 0 1 18 20 Z" />
-
-          <!-- lock inside bubble -->
-          <g class="lock" transform="translate(50 46)">
-            <rect x="-12" y="7" width="24" height="18" rx="3" />
-            <path d="M-7 7 v-8 a7 7 0 0 1 14 0 v8" />
-          </g>
-        </svg>
-      </span>
-      <span class="logo-text">TwatChat</span>
-    </div>
+  <div class="topbar-logo">
+  <span class="logo-glyph">
+    <svg viewBox="0 0 100 100" aria-label="TwatChat logo">
+      <path class="bubble"
+        d="M15 22 H78 A10 10 0 0 1 88 32 V60 A10 10 0 0 1 78 70 H52 L34 88 V70 H15 A10 10 0 0 1 5 60 V32 A10 10 0 0 1 15 22 Z"
+        filter="url(#glowFilter)"
+      />
+      <rect class="lock" x="38" y="50" width="24" height="16" rx="3" />
+      <path class="lock" d="M43 50 V43 a7 7 0 0 1 14 0 V50" />
+      <circle cx="50" cy="58" r="2" fill="url(#gradientStroke)" opacity="0.9" />
+    </svg>
+  </span>
+  <span class="logo-text">TwatChat</span>
+</div>
     <div class="topbar-user">
       <span class="user-status-dot online"></span>
       <div id="topbarAvatar" class="user-avatar self-avatar av-0">Y</div>
