@@ -6,6 +6,14 @@
 
 'use strict';
 
+
+const bottomNav = document.querySelector('.bottom-nav');
+
+function hideNav() { bottomNav.style.transform = 'translateX(-50%) translateY(120%)'; bottomNav.style.opacity = '0'; bottomNav.style.pointerEvents = 'none'; }
+function showNav() { bottomNav.style.transform = ''; bottomNav.style.opacity = ''; bottomNav.style.pointerEvents = ''; }
+
+
+
 // ============================================================
 // DUMMY DATA — USERS
 // ============================================================
@@ -420,6 +428,7 @@ function openChat(userId) {
 
   if (user.online && !user.blocked) scheduleFakeReply(user);
 
+   hideNav();
   msgInput.focus();
 }
 
@@ -469,6 +478,7 @@ function openGroupChat(groupId) {
 
   scheduleGroupFakeReply(group);
 
+  hideNav();
   msgInput.focus();
 }
 
@@ -817,6 +827,7 @@ msgInput.addEventListener('keydown', e => {
 // ============================================================
 
 backBtn.addEventListener('click', () => {
+   showNav();
   sidebar.classList.remove('hidden-mobile');
   activeUserId  = null;
   activeGroupId = null;
@@ -1051,6 +1062,7 @@ giLeaveBtn.addEventListener('click', () => {
   activeGroupId = null;
   emptyState.classList.remove('hidden');
   activeChat.classList.add('hidden');
+  showNav();
   showGlobalToast(`Left "${group.name}"`, 'error');
 });
 
@@ -1800,6 +1812,7 @@ document.getElementById('ccmDelete').addEventListener('click', () => {
 
     // On mobile, show sidebar again
     sidebar.classList.remove('hidden-mobile');
+    showNav();
 
     renderChatList(searchInput.value);
     showGlobalToast('Chat deleted', 'success');
