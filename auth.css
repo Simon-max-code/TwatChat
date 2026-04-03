@@ -506,6 +506,15 @@
   to   { opacity: 1; transform: translateY(0); }
 }
 
+.app-unlocked .bottom-nav {
+  animation: appRevealNav 0.5s 0.1s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+@keyframes appRevealNav {
+  from { opacity: 0; transform: translateX(-50%) translateY(6px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
 /* ============================================================
    Responsive auth
    ============================================================ */
