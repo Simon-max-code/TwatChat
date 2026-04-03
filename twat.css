@@ -93,7 +93,8 @@ input  { font-family: inherit; outline: none; border: none; background: none; co
   width: 38px;
   height: 38px;
   color: var(--cyan);
-  filter: drop-shadow(0 0 8px var(--cyan));
+  filter: drop-shadow(0 0 10px rgba(127, 214, 255, 0.6))
+          drop-shadow(0 0 25px rgba(167, 139, 250, 0.4));
   animation: pulse-glow 3s ease-in-out infinite;
 }
 .logo-glyph svg {
@@ -102,9 +103,10 @@ input  { font-family: inherit; outline: none; border: none; background: none; co
 }
 
 .logo-glyph .bubble {
-  fill: rgba(255, 255, 255, 0.06);
+  fill: rgba(255, 255, 255, 0.05);
   stroke: url(#gradientStroke);
   stroke-width: 3;
+  backdrop-filter: blur(10px);
 }
 
 .logo-glyph .lock {
