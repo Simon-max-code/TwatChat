@@ -558,7 +558,7 @@ input  { font-family: inherit; outline: none; border: none; background: none; co
    ============================================================ */
 .bottom-nav {
 
-  position: fixed; bottom: 18px; left: 30%; transform: translateX(-50%);
+  position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%);
   display: flex; align-items: center; gap: 2px;
   padding: 6px 8px; max-width: 380px; width: calc(100% - 36px);
   border-radius: var(--radius-pill);
