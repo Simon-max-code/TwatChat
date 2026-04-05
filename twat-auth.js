@@ -1,10 +1,6 @@
 /* ============================================================
    TwatChat — twat-auth.js
-   Frontend-only auth gate
-   - localStorage-backed session (persists across browser sessions)
-   - Simulated signup/login (no backend)
-   - Blocks all nav until authenticated
-   - Sign out clears session and brings gate back
+   Real auth — connected to Render backend
    ============================================================ */
 
 'use strict';
@@ -12,14 +8,15 @@
 /* ──────────────────────────────────────────────
    STORAGE KEYS
    ────────────────────────────────────────────── */
-const STORAGE_KEY_USER    = 'twatchat_user';
-const STORAGE_KEY_SESSION = 'twatchat_session';
+const STORAGE_KEY_TOKEN = 'twatchat_token';
+const STORAGE_KEY_USER  = 'twatchat_user';
 
 /* ──────────────────────────────────────────────
    HELPERS
    ────────────────────────────────────────────── */
 
-function saveUser(user) {
+function saveSession(token, user) {
+  localStorage.setItem(STORAGE_KEY_TOKEN, token);
   localStorage.setItem(STORAGE_KEY_USER, JSON.stringify(user));
 }
 
@@ -29,24 +26,13 @@ function loadUser() {
   } catch { return null; }
 }
 
-function saveSession(token) {
-  localStorage.setItem(STORAGE_KEY_SESSION, token);
-}
-
-function loadSession() {
-  return localStorage.getItem(STORAGE_KEY_SESSION);
+function loadToken() {
+  return localStorage.getItem(STORAGE_KEY_TOKEN);
 }
 
 function clearSession() {
-  localStorage.removeItem(STORAGE_KEY_SESSION);
-}
-
-function generateToken(email) {
-  // Lightweight fake JWT-ish token — base64 header.payload.sig
-  const header  = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
-  const payload = btoa(JSON.stringify({ sub: email, iat: Date.now(), exp: Date.now() + 86400_000 * 30 }));
-  const sig     = btoa(email + Date.now()).replace(/=/g, '');
-  return `${header}.${payload}.${sig}`;
+  localStorage.removeItem(STORAGE_KEY_TOKEN);
+  localStorage.removeItem(STORAGE_KEY_USER);
 }
 
 function getInitials(firstName, lastName) {
@@ -59,16 +45,16 @@ function getInitials(firstName, lastName) {
 
 function calcStrengthAuth(pw) {
   let score = 0;
-  if (pw.length >= 8)          score++;
-  if (pw.length >= 12)         score++;
-  if (/[A-Z]/.test(pw))       score++;
-  if (/[0-9]/.test(pw))       score++;
+  if (pw.length >= 8)           score++;
+  if (pw.length >= 12)          score++;
+  if (/[A-Z]/.test(pw))        score++;
+  if (/[0-9]/.test(pw))        score++;
   if (/[^A-Za-z0-9]/.test(pw)) score++;
   return score;
 }
 
 /* ──────────────────────────────────────────────
-   DOM REFS — Auth Gate
+   DOM REFS
    ────────────────────────────────────────────── */
 
 const authGate         = document.getElementById('authGate');
@@ -91,12 +77,12 @@ const signupStrengthFill  = document.getElementById('signupStrengthFill');
 const signupStrengthLabel = document.getElementById('signupStrengthLabel');
 
 // Login
-const loginForm       = document.getElementById('loginForm');
-const loginEmail      = document.getElementById('loginEmail');
-const loginPassword   = document.getElementById('loginPassword');
-const loginError      = document.getElementById('loginError');
-const loginSubmit     = document.getElementById('loginSubmit');
-const loginSpinner    = document.getElementById('loginSpinner');
+const loginForm          = document.getElementById('loginForm');
+const loginEmail         = document.getElementById('loginEmail');
+const loginPassword      = document.getElementById('loginPassword');
+const loginError         = document.getElementById('loginError');
+const loginSubmit        = document.getElementById('loginSubmit');
+const loginSpinner       = document.getElementById('loginSpinner');
 const loginAvatarPreview = document.getElementById('loginAvatarPreview');
 const forgotPasswordBtn  = document.getElementById('forgotPasswordBtn');
 
@@ -108,23 +94,13 @@ let currentAuthForm = 'signup';
 
 function switchAuthTab(target) {
   currentAuthForm = target;
-
   authTabBtns.forEach(btn => btn.classList.toggle('active', btn.dataset.form === target));
-
-  if (target === 'login') {
-    authTabSlider.classList.add('slide-right');
-  } else {
-    authTabSlider.classList.remove('slide-right');
-  }
-
+  authTabSlider.classList.toggle('slide-right', target === 'login');
   signupForm.classList.toggle('active', target === 'signup');
   loginForm.classList.toggle('active',  target === 'login');
-
-  // Re-trigger animation
   const form = target === 'signup' ? signupForm : loginForm;
   form.style.animation = 'none';
   requestAnimationFrame(() => { form.style.animation = ''; });
-
   clearAuthErrors();
 }
 
@@ -137,7 +113,7 @@ document.querySelectorAll('.auth-switch-btn').forEach(btn => {
 });
 
 /* ──────────────────────────────────────────────
-   PASSWORD VISIBILITY TOGGLES (auth forms)
+   PASSWORD VISIBILITY TOGGLES
    ────────────────────────────────────────────── */
 
 document.addEventListener('click', e => {
@@ -150,7 +126,7 @@ document.addEventListener('click', e => {
 });
 
 /* ──────────────────────────────────────────────
-   STRENGTH METER — signup
+   STRENGTH METER
    ────────────────────────────────────────────── */
 
 signupPassword.addEventListener('input', () => {
@@ -160,7 +136,7 @@ signupPassword.addEventListener('input', () => {
     signupStrengthLabel.textContent = '';
     return;
   }
-  const s = calcStrengthAuth(pw);
+  const s      = calcStrengthAuth(pw);
   const pct    = (s / 5) * 100;
   const colors = ['#ef4444','#f97316','#eab308','#22d3a5','#00d4ff'];
   const labels = ['Very weak','Weak','Fair','Strong','Very strong'];
@@ -170,18 +146,17 @@ signupPassword.addEventListener('input', () => {
 });
 
 /* ──────────────────────────────────────────────
-   LOGIN: live avatar preview from email
+   LOGIN: live avatar preview
    ────────────────────────────────────────────── */
 
 loginEmail.addEventListener('input', () => {
-  const email = loginEmail.value.trim();
+  const email  = loginEmail.value.trim();
   const stored = loadUser();
-
   if (stored && stored.email === email) {
-    loginAvatarPreview.className = 'auth-form-hero-avatar has-initial ' + (stored.avatarClass || 'av-0');
+    loginAvatarPreview.className  = 'auth-form-hero-avatar has-initial ' + (stored.avatarClass || 'av-0');
     loginAvatarPreview.textContent = stored.initials || '⬡';
   } else {
-    loginAvatarPreview.className = 'auth-form-hero-avatar';
+    loginAvatarPreview.className  = 'auth-form-hero-avatar';
     loginAvatarPreview.textContent = '⬡';
   }
 });
@@ -201,141 +176,8 @@ function clearAuthErrors() {
 }
 
 /* ──────────────────────────────────────────────
-   SIGNUP SUBMIT
-   ────────────────────────────────────────────── */
-
-signupForm.addEventListener('submit', async e => {
-  e.preventDefault();
-  clearAuthErrors();
-
-  const firstName  = signupFirstName.value.trim();
-  const lastName   = signupLastName.value.trim();
-  const email      = signupEmail.value.trim().toLowerCase();
-  const phone      = document.getElementById('signupPhone').value.trim();
-  const password   = signupPassword.value;
-  const confirmPw  = signupConfirmPw.value;
-  const termsOk    = signupTerms.checked;
-
-  // Validation
-  if (!email) {
-    showAuthError(signupError, 'Email address is required.');
-    signupEmail.focus();
-    return;
-  }
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    showAuthError(signupError, 'Please enter a valid email address.');
-    signupEmail.focus();
-    return;
-  }
-  if (!password) {
-    showAuthError(signupError, 'Password is required.');
-    signupPassword.focus();
-    return;
-  }
-  if (calcStrengthAuth(password) < 2) {
-    showAuthError(signupError, 'Your password is too weak. Use at least 8 characters with letters and numbers.');
-    signupPassword.focus();
-    return;
-  }
-  if (password !== confirmPw) {
-    showAuthError(signupError, 'Passwords do not match.');
-    signupConfirmPw.focus();
-    return;
-  }
-  if (!termsOk) {
-    showAuthError(signupError, 'Please accept the Terms of Service to continue.');
-    return;
-  }
-
-  // Simulate async call
-  setSubmitLoading(signupSubmit, signupSpinner, true);
-
-  await fakeDelay(1200);
-
-  const avatarClass = 'av-0';
-  const initials    = getInitials(firstName, lastName);
-  const displayName = [firstName, lastName].filter(Boolean).join(' ') || email.split('@')[0];
-
-  const user = {
-    email,
-    phone,
-    firstName,
-    lastName,
-    displayName,
-    initials,
-    avatarClass,
-    createdAt: new Date().toISOString(),
-  };
-
-  const token = generateToken(email);
-  saveUser(user);
-  saveSession(token);
-
-  setSubmitLoading(signupSubmit, signupSpinner, false);
-
-  unlockApp(user, 'Welcome to TwatChat! 🎉');
-});
-
-/* ──────────────────────────────────────────────
-   LOGIN SUBMIT
-   ────────────────────────────────────────────── */
-
-loginForm.addEventListener('submit', async e => {
-  e.preventDefault();
-  clearAuthErrors();
-
-  const email    = loginEmail.value.trim().toLowerCase();
-  const password = loginPassword.value;
-  const remember = document.getElementById('loginRemember').checked;
-
-  if (!email || !password) {
-    showAuthError(loginError, 'Please enter your email and password.');
-    return;
-  }
-
-  setSubmitLoading(loginSubmit, loginSpinner, true);
-
-  await fakeDelay(1000);
-
-  const stored = loadUser();
-
-  if (!stored || stored.email !== email) {
-    showAuthError(loginError, 'No account found with that email. Please sign up first.');
-    setSubmitLoading(loginSubmit, loginSpinner, false);
-    return;
-  }
-
-  // Front-end: we don't store the real password (no backend),
-  // so accept any non-empty password for demo. In production,
-  // this would be a server-side check.
-  const token = generateToken(email);
-  if (remember) {
-    saveSession(token);
-  }
-
-  setSubmitLoading(loginSubmit, loginSpinner, false);
-
-  unlockApp(stored, `Welcome back, ${stored.firstName || stored.displayName}!`);
-});
-
-/* ──────────────────────────────────────────────
-   FORGOT PASSWORD
-   ────────────────────────────────────────────── */
-
-forgotPasswordBtn.addEventListener('click', () => {
-  // For a frontend-only demo, just show a toast
-  if (typeof showGlobalToast === 'function') {
-    showGlobalToast('Password reset link sent to your email ✓', 'success');
-  }
-});
-
-/* ──────────────────────────────────────────────
    UI HELPERS
    ────────────────────────────────────────────── */
-
-function fakeDelay(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
 
 function setSubmitLoading(btn, spinner, loading) {
   btn.disabled = loading;
@@ -350,21 +192,119 @@ function setSubmitLoading(btn, spinner, loading) {
 }
 
 /* ──────────────────────────────────────────────
-   NAV GUARD — block tab switching before auth
+   SIGNUP SUBMIT — hits real API
+   ────────────────────────────────────────────── */
+
+signupForm.addEventListener('submit', async e => {
+  e.preventDefault();
+  clearAuthErrors();
+
+  const firstName = signupFirstName.value.trim();
+  const lastName  = signupLastName.value.trim();
+  const email     = signupEmail.value.trim().toLowerCase();
+  const phone     = document.getElementById('signupPhone').value.trim();
+  const password  = signupPassword.value;
+  const confirmPw = signupConfirmPw.value;
+  const termsOk   = signupTerms.checked;
+
+  // Client-side validation
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    showAuthError(signupError, 'Please enter a valid email address.');
+    return;
+  }
+  if (!password) {
+    showAuthError(signupError, 'Password is required.');
+    return;
+  }
+  if (calcStrengthAuth(password) < 2) {
+    showAuthError(signupError, 'Your password is too weak. Use at least 8 characters with letters and numbers.');
+    return;
+  }
+  if (password !== confirmPw) {
+    showAuthError(signupError, 'Passwords do not match.');
+    return;
+  }
+  if (!termsOk) {
+    showAuthError(signupError, 'Please accept the Terms of Service to continue.');
+    return;
+  }
+
+  setSubmitLoading(signupSubmit, signupSpinner, true);
+
+  try {
+    // ── Hit real API ──────────────────────────────────────
+    const data = await authAPI.register({
+      firstName,
+      lastName,
+      email,
+      phone,
+      password,
+    });
+
+    saveSession(data.token, data.user);
+    unlockApp(data.user, 'Welcome to TwatChat! 🎉');
+
+  } catch (err) {
+    showAuthError(signupError, err.message || 'Registration failed. Please try again.');
+  } finally {
+    setSubmitLoading(signupSubmit, signupSpinner, false);
+  }
+});
+
+/* ──────────────────────────────────────────────
+   LOGIN SUBMIT — hits real API
+   ────────────────────────────────────────────── */
+
+loginForm.addEventListener('submit', async e => {
+  e.preventDefault();
+  clearAuthErrors();
+
+  const email    = loginEmail.value.trim().toLowerCase();
+  const password = loginPassword.value;
+
+  if (!email || !password) {
+    showAuthError(loginError, 'Please enter your email and password.');
+    return;
+  }
+
+  setSubmitLoading(loginSubmit, loginSpinner, true);
+
+  try {
+    // ── Hit real API ──────────────────────────────────────
+    const data = await authAPI.login({ email, password });
+
+    saveSession(data.token, data.user);
+    unlockApp(data.user, `Welcome back, ${data.user.firstName || data.user.displayName}!`);
+
+  } catch (err) {
+    showAuthError(loginError, err.message || 'Login failed. Please try again.');
+  } finally {
+    setSubmitLoading(loginSubmit, loginSpinner, false);
+  }
+});
+
+/* ──────────────────────────────────────────────
+   FORGOT PASSWORD
+   ────────────────────────────────────────────── */
+
+forgotPasswordBtn.addEventListener('click', () => {
+  if (typeof showGlobalToast === 'function') {
+    showGlobalToast('Password reset coming soon', 'success');
+  }
+});
+
+/* ──────────────────────────────────────────────
+   NAV GUARD
    ────────────────────────────────────────────── */
 
 function installNavGuard() {
-  const navTabEls = document.querySelectorAll('.nav-tab');
-
-  navTabEls.forEach(tab => {
+  document.querySelectorAll('.nav-tab').forEach(tab => {
     tab.addEventListener('click', e => {
-      // If auth gate is visible, intercept — but allow (it handles itself)
       if (!authGate.classList.contains('hidden')) {
         e.stopImmediatePropagation();
-        // Shake the panel to hint the user
         shakePanelHint();
       }
-    }, true); // capture phase — runs before twat.js handlers
+    }, true);
   });
 }
 
@@ -375,7 +315,6 @@ function shakePanelHint() {
   });
 }
 
-/* Shake keyframe injected dynamically */
 (function injectShakeKeyframe() {
   const style = document.createElement('style');
   style.textContent = `
@@ -396,19 +335,12 @@ function shakePanelHint() {
    ────────────────────────────────────────────── */
 
 function unlockApp(user, toastMsg) {
-  // Animate gate out
   authGate.classList.add('auth-gate--exit');
-
   setTimeout(() => {
     authGate.classList.add('hidden');
     authGate.classList.remove('auth-gate--exit');
-
-    // Populate UI with user data
     applyUserToUI(user);
-
-    // Reveal app
     document.body.classList.add('app-unlocked');
-
     if (typeof showGlobalToast === 'function') {
       setTimeout(() => showGlobalToast(toastMsg, 'success'), 200);
     }
@@ -416,16 +348,15 @@ function unlockApp(user, toastMsg) {
 }
 
 /* ──────────────────────────────────────────────
-   APPLY USER DATA TO APP UI
+   APPLY USER DATA TO UI
    ────────────────────────────────────────────── */
 
 function applyUserToUI(user) {
-  const initials    = user.initials || 'U';
+  const initials    = user.initials    || getInitials(user.firstName, user.lastName);
   const displayName = user.displayName || user.email;
   const avatarClass = user.avatarClass || 'av-0';
   const tag         = '@' + (user.firstName || displayName).toLowerCase().replace(/\s+/g, '');
 
-  // Topbar
   const topbarAvatar = document.getElementById('topbarAvatar');
   const topbarName   = document.getElementById('topbarName');
   if (topbarAvatar) {
@@ -434,7 +365,6 @@ function applyUserToUI(user) {
   }
   if (topbarName) topbarName.textContent = displayName;
 
-  // Settings page profile card
   const settingsAv = document.getElementById('settingsAvatar');
   if (settingsAv) {
     settingsAv.textContent = initials;
@@ -455,56 +385,53 @@ function applyUserToUI(user) {
 function signOut() {
   clearSession();
   document.body.classList.remove('app-unlocked');
-
-  // Reset forms
   signupForm.reset();
   loginForm.reset();
-  signupStrengthFill.style.width = '0%';
+  signupStrengthFill.style.width  = '0%';
   signupStrengthLabel.textContent = '';
-  loginAvatarPreview.className = 'auth-form-hero-avatar';
-  loginAvatarPreview.textContent = '⬡';
+  loginAvatarPreview.className    = 'auth-form-hero-avatar';
+  loginAvatarPreview.textContent  = '⬡';
   clearAuthErrors();
-  switchAuthTab('signup');
 
-  // Check if a user exists to decide which form to show
   const stored = loadUser();
-  if (stored) switchAuthTab('login');
+  switchAuthTab(stored ? 'login' : 'signup');
 
   authGate.classList.remove('hidden');
   authGate.classList.remove('auth-gate--exit');
 }
 
-// Wire up sign-out row in settings
 const signOutRow = document.getElementById('signOutRow');
-if (signOutRow) {
-  signOutRow.addEventListener('click', signOut);
-}
+if (signOutRow) signOutRow.addEventListener('click', signOut);
 
 /* ──────────────────────────────────────────────
-   INIT — check session on page load
+   INIT — check token on page load
    ────────────────────────────────────────────── */
 
-function authInit() {
+async function authInit() {
   installNavGuard();
 
-  const session = loadSession();
-  const user    = loadUser();
+  const token = loadToken();
+  const user  = loadUser();
 
-  if (session && user) {
-    // Already logged in — skip gate
-    authGate.classList.add('hidden');
-    applyUserToUI(user);
-    document.body.classList.add('app-unlocked');
+  if (token && user) {
+    // Verify token is still valid with backend
+    try {
+      const data = await authAPI.getMe();
+      // Token valid — update stored user with fresh data
+      saveSession(token, data.user);
+      authGate.classList.add('hidden');
+      applyUserToUI(data.user);
+      document.body.classList.add('app-unlocked');
+    } catch (err) {
+      // Token expired or invalid — force re-login
+      clearSession();
+      switchAuthTab('login');
+    }
     return;
   }
 
-  // First visit or logged out — show gate
-  // If a user account exists but no session, go to login tab
-  if (user && !session) {
-    switchAuthTab('login');
-  } else {
-    switchAuthTab('signup');
-  }
+  // No session — show correct tab
+  switchAuthTab(user ? 'login' : 'signup');
 }
 
 authInit();
