@@ -344,6 +344,9 @@ function unlockApp(user, toastMsg) {
     if (typeof showGlobalToast === 'function') {
       setTimeout(() => showGlobalToast(toastMsg, 'success'), 200);
     }
+    if (typeof window.onAppUnlocked === 'function') {
+      window.onAppUnlocked(user);
+    }
   }, 520);
 }
 

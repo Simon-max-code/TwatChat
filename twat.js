@@ -1,236 +1,98 @@
 /* ============================================================
-   TwatChat — script.js
-   All frontend logic: data, rendering, interactions
-   Group chat support fully integrated
+   TwatChat — twat.js
+   All frontend logic wired to real backend + Socket.io
    ============================================================ */
 
 'use strict';
 
-const bottomNav = document.querySelector('.bottom-nav');
+const BACKEND_URL = 'https://twatchat-backend.onrender.com';
 
-function hideNav() {
-  if (!bottomNav) return;
-  if (window.innerWidth > 680) return;
-  bottomNav.style.transform = 'translateX(-50%) translateY(calc(100% + 26px))';
-  bottomNav.style.opacity = '0';
-  bottomNav.style.pointerEvents = 'none';
+// ============================================================
+// SOCKET.IO — connect after auth
+// ============================================================
+
+let socket = null;
+
+function connectSocket(user) {
+  if (socket && socket.connected) return;
+
+  socket = io(BACKEND_URL, {
+    transports: ['websocket', 'polling'],
+  });
+
+  socket.on('connect', () => {
+    console.log('🔌 Socket connected:', socket.id);
+    socket.emit('presence:online', { userId: user._id });
+  });
+
+  socket.on('disconnect', () => {
+    console.log('❌ Socket disconnected');
+  });
+
+  // ── Incoming new message ───────────────────────────────
+  socket.on('message:new', ({ message, chatId }) => {
+    if (chatId === activeChatId) {
+      appendMessage(message);
+    }
+    refreshChatList();
+  });
+
+  // ── Presence updates ───────────────────────────────────
+  socket.on('presence:update', ({ userId, isOnline }) => {
+    updateUserPresence(userId, isOnline);
+  });
+
+  // ── Typing indicator ───────────────────────────────────
+  socket.on('typing:update', ({ chatId, userName, isTyping }) => {
+    if (chatId !== activeChatId) return;
+    if (isTyping) {
+      typingName.textContent = userName;
+      typingIndicator.classList.remove('hidden');
+      scrollToBottom(true);
+    } else {
+      typingIndicator.classList.add('hidden');
+    }
+  });
+
+  // ── Chat updated (unread badge) ────────────────────────
+  socket.on('chat:updated', () => {
+    refreshChatList();
+  });
+
+  // ── Message deleted ────────────────────────────────────
+  socket.on('message:deleted', ({ msgId }) => {
+    const el = document.querySelector(`[data-msg-id="${msgId}"]`);
+    if (el) el.remove();
+  });
 }
-
-function showNav() {
-  if (!bottomNav) return;
-  bottomNav.style.transform = 'translateX(-50%) translateY(0)';
-  bottomNav.style.opacity = '1';
-  bottomNav.style.pointerEvents = '';
-}
-
-
-// ============================================================
-// DUMMY DATA — USERS
-// ============================================================
-
-const USERS = [
-  {
-    id: 1,
-    name: 'Golden Amu',
-    usertag: '@goldenamu',
-    initials: 'GA',
-    avatarClass: 'av-0',
-    online: true,
-    unread: 3,
-    lastTime: '10:42',
-    muted: false,
-    blocked: false,
-    messages: [
-      { from: 'them', text: 'Hey! Did you check out the new design system?', time: '10:30' },
-      { from: 'me',   text: 'Yeah, it\'s looking really clean. Love the token structure.', time: '10:31' },
-      { from: 'them', text: 'Right? The dark mode tokens are 🔥', time: '10:33' },
-      { from: 'me',   text: 'Sent you the PR link — can you review when you get a chance?', time: '10:35' },
-      { from: 'them', text: 'On it. Give me 20 minutes.', time: '10:36' },
-      { from: 'them', text: 'Also quick question — are we using Syne for the headings?', time: '10:41' },
-      { from: 'them', text: 'Need to update the Figma file if so', time: '10:42' },
-    ],
-  },
-  {
-    id: 2,
-    name: 'Omni Amu',
-    usertag: '@omniamu',
-    initials: 'OA',
-    avatarClass: 'av-1',
-    online: true,
-    unread: 1,
-    lastTime: '09:58',
-    muted: false,
-    blocked: false,
-    messages: [
-      { from: 'me',   text: 'Hey, you joining the standup?', time: '09:45' },
-      { from: 'them', text: 'Already in. You\'re late 😂', time: '09:46' },
-      { from: 'me',   text: 'lmaooo two minutes doesn\'t count', time: '09:47' },
-      { from: 'them', text: 'The CI pipeline broke again btw', time: '09:55' },
-      { from: 'me',   text: 'Of course it did. Same env issue?', time: '09:56' },
-      { from: 'them', text: 'Nah, looks like the Docker image cache got wiped', time: '09:58' },
-    ],
-  },
-  {
-    id: 3,
-    name: 'Brutally Gay',
-    usertag: '@brutallygay',
-    initials: 'BG',
-    avatarClass: 'av-2',
-    online: false,
-    unread: 0,
-    lastTime: 'Yesterday',
-    muted: false,
-    blocked: false,
-    messages: [
-      { from: 'them', text: 'Can you send me the wireframes when ready?', time: 'Yesterday' },
-      { from: 'me',   text: 'Just exported them — check your email!', time: 'Yesterday' },
-      { from: 'them', text: 'Got them, thanks! These look amazing 😍', time: 'Yesterday' },
-      { from: 'me',   text: 'Glad you like it! Let me know if anything needs tweaking.', time: 'Yesterday' },
-      { from: 'them', text: 'The hero section might need a bit more breathing room but otherwise perfect', time: 'Yesterday' },
-    ],
-  },
-  {
-    id: 4,
-    name: 'Aunty Linda',
-    usertag: '@auntylinda',
-    initials: 'AL',
-    avatarClass: 'av-3',
-    online: true,
-    unread: 7,
-    lastTime: '11:05',
-    muted: false,
-    blocked: false,
-    messages: [
-      { from: 'them', text: 'The client wants a demo by Friday 😬', time: '11:00' },
-      { from: 'me',   text: 'That\'s in 3 days... what\'s the scope?', time: '11:01' },
-      { from: 'them', text: 'Login flow, dashboard overview, and the reporting module', time: '11:02' },
-      { from: 'them', text: 'Basically the whole thing lol', time: '11:02' },
-      { from: 'me',   text: 'Ok let\'s triage — what\'s the MVP of the MVP?', time: '11:03' },
-      { from: 'them', text: 'Dashboard is the must-have. Rest can be mocked.', time: '11:04' },
-      { from: 'them', text: 'Let\'s hop on a call?', time: '11:05' },
-    ],
-  },
-  {
-    id: 5,
-    name: 'Evil Spawn',
-    usertag: '@evilspawn',
-    initials: 'ES',
-    avatarClass: 'av-4',
-    online: false,
-    unread: 0,
-    lastTime: 'Mon',
-    muted: false,
-    blocked: false,
-    messages: [
-      { from: 'me',   text: 'Did the deployment go through?', time: 'Mon' },
-      { from: 'them', text: 'Yep! Prod is green 🟢', time: 'Mon' },
-      { from: 'me',   text: 'Smooth! Great work on the migration script.', time: 'Mon' },
-      { from: 'them', text: 'Thanks! Couldn\'t have done it without the runbook you wrote', time: 'Mon' },
-      { from: 'me',   text: 'Teamwork makes the dream work 🙌', time: 'Mon' },
-    ],
-  },
-  {
-    id: 6,
-    name: 'Sirsimon',
-    usertag: '@sirsimon',
-    initials: 'Ss',
-    avatarClass: 'av-5',
-    online: true,
-    unread: 2,
-    lastTime: '08:30',
-    muted: false,
-    blocked: false,
-    messages: [
-      { from: 'them', text: 'Morning! Coffee first, then code ☕', time: '08:15' },
-      { from: 'me',   text: 'Always. What are you working on today?', time: '08:17' },
-      { from: 'them', text: 'Finally tackling that auth refactor. Wish me luck.', time: '08:20' },
-      { from: 'me',   text: 'You\'ve got this. The old code was... character-building.', time: '08:22' },
-      { from: 'them', text: 'Haha "character-building" is generous', time: '08:25' },
-      { from: 'them', text: 'Hey can you review the new token refresh logic later?', time: '08:30' },
-    ],
-  },
-];
-
-// ============================================================
-// DUMMY DATA — GROUPS
-// ============================================================
-
-let groupIdCounter = 100;
-
-const GROUPS = [
-  {
-    id: 101,
-    type: 'group',
-    name: 'Design Squad',
-    icon: '🎨',
-    memberIds: [1, 2, 3],
-    unread: 4,
-    lastTime: '11:20',
-    messages: [
-      { senderId: 1, senderName: 'Golden Amu', text: 'Morning team! Ready for the design review?', time: '09:00' },
-      { senderId: 2, senderName: 'Omni Amu',   text: 'Let\'s go! I have my slides ready.', time: '09:02' },
-      { senderId: 'me', senderName: 'You',     text: 'Same. Sharing screen in 2 mins', time: '09:03' },
-      { senderId: 3, senderName: 'Brutally Gay', text: 'The new button system looks incredible btw', time: '11:15' },
-      { senderId: 1, senderName: 'Golden Amu', text: 'Right?! The hover states finally feel alive', time: '11:18' },
-      { senderId: 2, senderName: 'Omni Amu',   text: 'Can we ship this week or do we need another review cycle?', time: '11:20' },
-    ],
-  },
-  {
-    id: 102,
-    type: 'group',
-    name: 'Backend Nerds',
-    icon: '⚡',
-    memberIds: [2, 5, 6],
-    unread: 1,
-    lastTime: '10:05',
-    messages: [
-      { senderId: 5, senderName: 'Evil Spawn',  text: 'Prod deployment done. Zero issues 🎉', time: '09:50' },
-      { senderId: 'me', senderName: 'You',      text: 'Incredible. Who reviewed the DB migration?', time: '09:52' },
-      { senderId: 6, senderName: 'Sirsimon',    text: 'I did, ran it against staging twice', time: '09:55' },
-      { senderId: 2, senderName: 'Omni Amu',    text: 'The cache TTL change made a huge diff on latency', time: '10:05' },
-    ],
-  },
-  {
-    id: 103,
-    type: 'group',
-    name: 'The Chaos Crew',
-    icon: '🔥',
-    memberIds: [1, 3, 4, 6],
-    unread: 0,
-    lastTime: 'Yesterday',
-    messages: [
-      { senderId: 4, senderName: 'Aunty Linda', text: 'GUYS. The client just moved the deadline to MONDAY', time: 'Yesterday' },
-      { senderId: 1, senderName: 'Golden Amu',  text: '😭😭😭', time: 'Yesterday' },
-      { senderId: 3, senderName: 'Brutally Gay', text: 'I\'m crying', time: 'Yesterday' },
-      { senderId: 'me', senderName: 'You',      text: 'Ok everyone breathe. We\'ve done worse before.', time: 'Yesterday' },
-      { senderId: 6, senderName: 'Sirsimon',    text: 'True. We shipped the whole dashboard in a weekend once', time: 'Yesterday' },
-      { senderId: 4, senderName: 'Aunty Linda', text: 'Fine. Let\'s do it. Calling an emergency session at 6pm', time: 'Yesterday' },
-    ],
-  },
-];
 
 // ============================================================
 // STATE
 // ============================================================
 
-let activeUserId   = null;
-let activeGroupId  = null;
-let activeSidebarTab = 'dms';
-let typingTimer    = null;
+let activeChatId      = null;
+let activeIsGroup     = false;
+let activeSidebarTab  = 'dms';
+let typingTimer       = null;
+let allUsers          = [];   // cached from GET /api/users
+let allChats          = [];   // cached from GET /api/chats
 let selectedGroupIcon = '🚀';
 let selectedMemberIds = new Set();
+let currentPage       = 1;
+let hasMoreMessages   = false;
 
 // ============================================================
 // DOM REFS
 // ============================================================
 
-const chatListEl       = document.getElementById('chatList');
-const groupListEl      = document.getElementById('groupList');
-const searchInput      = document.getElementById('searchInput');
-const emptyState       = document.getElementById('emptyState');
-const activeChat       = document.getElementById('activeChat');
-const messagesArea     = document.getElementById('messagesArea');
-const chatHeaderAvatar = document.getElementById('chatHeaderAvatar');
+const bottomNav      = document.querySelector('.bottom-nav');
+const chatListEl     = document.getElementById('chatList');
+const groupListEl    = document.getElementById('groupList');
+const searchInput    = document.getElementById('searchInput');
+const emptyState     = document.getElementById('emptyState');
+const activeChat     = document.getElementById('activeChat');
+const messagesArea   = document.getElementById('messagesArea');
+const chatHeaderAvatar      = document.getElementById('chatHeaderAvatar');
 const chatHeaderGroupAvatar = document.getElementById('chatHeaderGroupAvatar');
 const chatHeaderGroupAvatarInner = document.getElementById('chatHeaderGroupAvatarInner');
 const chatHeaderName   = document.getElementById('chatHeaderName');
@@ -243,11 +105,27 @@ const backBtn          = document.getElementById('backBtn');
 const sidebar          = document.getElementById('sidebar');
 const navTabs          = document.querySelectorAll('.nav-tab');
 const groupInfoBtn     = document.getElementById('groupInfoBtn');
+const tabDMs           = document.getElementById('tabDMs');
+const tabGroups        = document.getElementById('tabGroups');
+const newGroupBtn      = document.getElementById('newGroupBtn');
 
-// Sidebar tabs
-const tabDMs     = document.getElementById('tabDMs');
-const tabGroups  = document.getElementById('tabGroups');
-const newGroupBtn = document.getElementById('newGroupBtn');
+// ============================================================
+// NAV HELPERS
+// ============================================================
+
+function hideNav() {
+  if (!bottomNav || window.innerWidth > 680) return;
+  bottomNav.style.transform = 'translateX(-50%) translateY(calc(100% + 26px))';
+  bottomNav.style.opacity   = '0';
+  bottomNav.style.pointerEvents = 'none';
+}
+
+function showNav() {
+  if (!bottomNav) return;
+  bottomNav.style.transform = 'translateX(-50%) translateY(0)';
+  bottomNav.style.opacity   = '1';
+  bottomNav.style.pointerEvents = '';
+}
 
 // ============================================================
 // HELPERS
@@ -258,24 +136,35 @@ function now() {
   return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
 }
 
+function formatTime(dateStr) {
+  if (!dateStr) return '';
+  const d    = new Date(dateStr);
+  const today = new Date();
+  const diff  = today - d;
+  const days  = Math.floor(diff / 86400000);
+  if (days === 0) return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+  if (days === 1) return 'Yesterday';
+  if (days < 7)   return d.toLocaleDateString('en', { weekday: 'short' });
+  return d.toLocaleDateString('en', { day: 'numeric', month: 'short' });
+}
+
+function escapeHTML(str = '') {
+  return str
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
 function scrollToBottom(smooth = true) {
   messagesArea.scrollTo({ top: messagesArea.scrollHeight, behavior: smooth ? 'smooth' : 'instant' });
 }
 
-function getUserById(id) {
-  return USERS.find(u => u.id === id);
+function getMe() {
+  try { return JSON.parse(localStorage.getItem('twatchat_user')); } catch { return null; }
 }
 
-function getGroupById(id) {
-  return GROUPS.find(g => g.id === id);
-}
-
-function escapeHTML(str) {
-  return str
-    .replace(/&/g,'&amp;')
-    .replace(/</g,'&lt;')
-    .replace(/>/g,'&gt;')
-    .replace(/"/g,'&quot;');
+function getDMPartner(chat) {
+  const me = getMe();
+  return chat.members.find(m => m._id !== me._id) || chat.members[0];
 }
 
 // ============================================================
@@ -284,338 +173,307 @@ function escapeHTML(str) {
 
 function switchSidebarTab(tab) {
   activeSidebarTab = tab;
-  tabDMs.classList.toggle('active', tab === 'dms');
+  tabDMs.classList.toggle('active',    tab === 'dms');
   tabGroups.classList.toggle('active', tab === 'groups');
-  chatListEl.classList.toggle('hidden', tab !== 'dms');
+  chatListEl.classList.toggle('hidden',  tab !== 'dms');
   groupListEl.classList.toggle('hidden', tab !== 'groups');
-  newGroupBtn.style.opacity = tab === 'groups' ? '1' : '0.4';
+  newGroupBtn.style.opacity      = tab === 'groups' ? '1' : '0.4';
   newGroupBtn.style.pointerEvents = tab === 'groups' ? 'all' : 'none';
 }
 
-tabDMs.addEventListener('click', () => switchSidebarTab('dms'));
+tabDMs.addEventListener('click',    () => switchSidebarTab('dms'));
 tabGroups.addEventListener('click', () => switchSidebarTab('groups'));
 
 // ============================================================
-// RENDER: DM CHAT LIST
+// LOAD + RENDER SIDEBAR
+// ============================================================
+
+async function loadAndRenderSidebar() {
+  try {
+    const [usersData, chatsData] = await Promise.all([
+      usersAPI.getAll(),
+      chatsAPI.getAll(),
+    ]);
+
+    allUsers = usersData.users || [];
+    allChats = chatsData.chats || [];
+
+    renderChatList();
+    renderGroupList();
+  } catch (err) {
+    console.error('Sidebar load error:', err.message);
+  }
+}
+
+async function refreshChatList() {
+  try {
+    const data = await chatsAPI.getAll();
+    allChats = data.chats || [];
+    renderChatList();
+    renderGroupList();
+  } catch (err) {
+    console.error('Refresh error:', err.message);
+  }
+}
+
+// ============================================================
+// RENDER DM LIST
 // ============================================================
 
 function renderChatList(filter = '') {
   chatListEl.innerHTML = '';
+  const me    = getMe();
   const lower = filter.toLowerCase();
-  const filtered = USERS.filter(u => u.name.toLowerCase().includes(lower));
 
-  if (!filtered.length) {
-    chatListEl.innerHTML = `<p style="text-align:center;color:var(--text-muted);padding:20px;font-size:13px;">No chats found</p>`;
+  const dms = allChats.filter(c => {
+    if (c.isGroup) return false;
+    const partner = getDMPartner(c);
+    return (partner?.displayName || '').toLowerCase().includes(lower);
+  });
+
+  if (!dms.length) {
+    chatListEl.innerHTML = `<p style="text-align:center;color:var(--text-muted);padding:20px;font-size:13px;">No chats yet</p>`;
     return;
   }
 
-  filtered.forEach(user => {
-    const lastMsg = user.messages[user.messages.length - 1];
-    const preview = lastMsg ? lastMsg.text : 'No messages yet';
+  dms.forEach(chat => {
+    const partner  = getDMPartner(chat);
+    const lastMsg  = chat.lastMessage;
+    const preview  = lastMsg
+      ? (lastMsg.sender?._id === me?._id ? `You: ${lastMsg.text}` : lastMsg.text)
+      : 'No messages yet';
+    const unread   = chat.unreadCounts?.[me?._id] || 0;
+    const time     = formatTime(chat.updatedAt);
+    const isActive = chat._id === activeChatId;
+
     const item = document.createElement('div');
-    item.className = 'chat-item' + (user.id === activeUserId ? ' active' : '');
-    item.dataset.id = user.id;
-
-    // Visual indicators for muted / blocked users
-    const muteTag  = user.muted   ? `<span style="font-size:10px;color:var(--text-muted);margin-left:4px;">🔕</span>` : '';
-    const blockTag = user.blocked ? `<span style="font-size:10px;color:#f87171;margin-left:4px;">🚫</span>` : '';
-
+    item.className = `chat-item${isActive ? ' active' : ''}`;
+    item.dataset.id = chat._id;
     item.innerHTML = `
       <div class="ci-avatar-wrap">
-        <div class="ci-avatar ${user.avatarClass}">${user.initials}</div>
-        <span class="ci-status ${user.online && !user.blocked ? 'online' : 'offline'}"></span>
+        <div class="ci-avatar ${partner?.avatarClass || 'av-0'}">${partner?.initials || '?'}</div>
+        <span class="ci-status ${partner?.isOnline ? 'online' : 'offline'}"></span>
       </div>
       <div class="ci-content">
         <div class="ci-top">
-          <span class="ci-name">${user.name}${muteTag}${blockTag}</span>
-          <span class="ci-time">${user.lastTime}</span>
+          <span class="ci-name">${escapeHTML(partner?.displayName || 'Unknown')}</span>
+          <span class="ci-time">${time}</span>
         </div>
         <div class="ci-bottom">
-          <span class="ci-preview">${user.blocked ? 'You blocked this user' : preview}</span>
-          ${user.unread > 0 && !user.muted ? `<span class="ci-badge">${user.unread}</span>` : ''}
+          <span class="ci-preview">${escapeHTML(preview)}</span>
+          ${unread > 0 ? `<span class="ci-badge">${unread}</span>` : ''}
         </div>
       </div>
     `;
-    item.addEventListener('click', () => openChat(user.id));
+    item.addEventListener('click', () => openChat(chat._id));
     chatListEl.appendChild(item);
   });
 }
 
 // ============================================================
-// RENDER: GROUP LIST
+// RENDER GROUP LIST
 // ============================================================
 
 function renderGroupList(filter = '') {
   groupListEl.innerHTML = '';
+  const me    = getMe();
   const lower = filter.toLowerCase();
-  const filtered = GROUPS.filter(g => g.name.toLowerCase().includes(lower));
 
-  if (!filtered.length) {
+  const groups = allChats.filter(c => {
+    if (!c.isGroup) return false;
+    return c.name.toLowerCase().includes(lower);
+  });
+
+  if (!groups.length) {
     groupListEl.innerHTML = `<p style="text-align:center;color:var(--text-muted);padding:20px;font-size:13px;">No groups yet</p>`;
     return;
   }
 
-  filtered.forEach(group => {
-    const lastMsg = group.messages[group.messages.length - 1];
-    const preview = lastMsg ? `${lastMsg.senderId === 'me' ? 'You' : lastMsg.senderName.split(' ')[0]}: ${lastMsg.text}` : 'No messages yet';
-    const memberAvatars = buildGroupAvatarMini(group, 'sm');
+  groups.forEach(chat => {
+    const lastMsg  = chat.lastMessage;
+    const preview  = lastMsg
+      ? `${lastMsg.sender?._id === me?._id ? 'You' : lastMsg.sender?.displayName?.split(' ')[0] || ''}: ${lastMsg.text}`
+      : 'No messages yet';
+    const unread   = chat.unreadCounts?.[me?._id] || 0;
+    const time     = formatTime(chat.updatedAt);
+    const isActive = chat._id === activeChatId;
+    const avatars  = buildGroupAvatarMini(chat);
 
     const item = document.createElement('div');
-    item.className = 'chat-item group-chat-item' + (group.id === activeGroupId ? ' active' : '');
-    item.dataset.gid = group.id;
+    item.className = `chat-item group-chat-item${isActive ? ' active' : ''}`;
+    item.dataset.gid = chat._id;
     item.innerHTML = `
       <div class="ci-avatar-wrap">
-        <div class="group-avatar-stack sm">${memberAvatars}</div>
-        <span class="group-icon-badge">${group.icon}</span>
+        <div class="group-avatar-stack sm">${avatars}</div>
+        <span class="group-icon-badge">${chat.icon || '🚀'}</span>
       </div>
       <div class="ci-content">
         <div class="ci-top">
-          <span class="ci-name">${escapeHTML(group.name)}</span>
-          <span class="ci-time">${group.lastTime}</span>
+          <span class="ci-name">${escapeHTML(chat.name)}</span>
+          <span class="ci-time">${time}</span>
         </div>
         <div class="ci-bottom">
           <span class="ci-preview">${escapeHTML(preview)}</span>
-          ${group.unread > 0 ? `<span class="ci-badge">${group.unread}</span>` : ''}
+          ${unread > 0 ? `<span class="ci-badge">${unread}</span>` : ''}
         </div>
       </div>
     `;
-    item.addEventListener('click', () => openGroupChat(group.id));
+    item.addEventListener('click', () => openChat(chat._id));
     groupListEl.appendChild(item);
   });
 }
 
-// Build the stacked avatar HTML for a group
-function buildGroupAvatarMini(group, size = 'sm') {
-  const members = group.memberIds.slice(0, 3).map(id => getUserById(id)).filter(Boolean);
-  return members.map((u, i) =>
-    `<div class="gam-avatar ${u.avatarClass}" style="z-index:${3-i}">${u.initials}</div>`
+function buildGroupAvatarMini(chat) {
+  return (chat.members || []).slice(0, 3).map((m, i) =>
+    `<div class="gam-avatar ${m.avatarClass || 'av-0'}" style="z-index:${3-i}">${m.initials || '?'}</div>`
   ).join('');
 }
 
 // ============================================================
-// OPEN DM CHAT
+// OPEN CHAT (DM or Group)
 // ============================================================
 
-function openChat(userId) {
-  const user = getUserById(userId);
-  if (!user) return;
+async function openChat(chatId) {
+  try {
+    closeChatContextMenu();
+    closeMsgSearchBar();
+    clearTimeout(typingTimer);
+    typingIndicator.classList.add('hidden');
 
-  closeChatContextMenu();
-  closeMsgSearchBar();
-  clearTimeout(typingTimer);
-  typingIndicator.classList.add('hidden');
-
-  activeUserId  = userId;
-  activeGroupId = null;
-
-  user.unread = 0;
-
-  renderChatList(searchInput.value);
-
-  // Header — DM mode
-  chatHeaderAvatar.className = `chat-header-avatar ${user.avatarClass}`;
-  chatHeaderAvatar.textContent = user.initials;
-  chatHeaderAvatar.classList.remove('hidden');
-  chatHeaderGroupAvatar.classList.add('hidden');
-
-  chatHeaderName.textContent = user.name;
-  chatHeaderStatus.textContent = user.online ? '● Online' : '● Offline';
-  chatHeaderStatus.className = 'chat-header-status' + (user.online ? ' is-online' : '');
-
-  groupInfoBtn.classList.add('hidden');
-
-  // Show / hide the 3-dot menu button (only for DMs)
-  moreOptionsBtn.classList.remove('hidden');
-  // Reset menu button state
-  moreOptionsBtn.classList.remove('menu-open');
-
-  emptyState.classList.add('hidden');
-  activeChat.classList.remove('hidden');
-
-  renderMessages(user);
-
-  sidebar.classList.add('hidden-mobile');
-
-  if (user.online && !user.blocked) scheduleFakeReply(user);
-
-   hideNav();
-  msgInput.focus();
-}
-
-// ============================================================
-// OPEN GROUP CHAT
-// ============================================================
-
-function openGroupChat(groupId) {
-  const group = getGroupById(groupId);
-  if (!group) return;
-
-  closeChatContextMenu();
-  closeMsgSearchBar();
-  clearTimeout(typingTimer);
-  typingIndicator.classList.add('hidden');
-
-  activeGroupId = groupId;
-  activeUserId  = null;
-
-  group.unread = 0;
-
-  renderGroupList(searchInput.value);
-
-  // Header — Group mode
-  chatHeaderAvatar.classList.add('hidden');
-  chatHeaderGroupAvatar.classList.remove('hidden');
-  chatHeaderGroupAvatarInner.innerHTML = buildGroupAvatarMini(group, 'hdr');
-  chatHeaderGroupAvatarInner.className = 'group-avatar-stack hdr';
-
-  chatHeaderName.textContent = `${group.icon} ${group.name}`;
-  const memberCount = group.memberIds.length + 1;
-  chatHeaderStatus.textContent = `${memberCount} members`;
-  chatHeaderStatus.className = 'chat-header-status';
-
-  groupInfoBtn.classList.remove('hidden');
-
-  // Hide 3-dot menu for groups (not required by spec)
-  moreOptionsBtn.classList.add('hidden');
-  moreOptionsBtn.classList.remove('menu-open');
-
-  emptyState.classList.add('hidden');
-  activeChat.classList.remove('hidden');
-
-  renderGroupMessages(group);
-
-  sidebar.classList.add('hidden-mobile');
-
-  scheduleGroupFakeReply(group);
-
-  hideNav();
-  msgInput.focus();
-}
-
-// ============================================================
-// RENDER DM MESSAGES
-// ============================================================
-
-function renderMessages(user) {
-  messagesArea.innerHTML = '';
-
-  // Blocked overlay
-  const overlay = document.createElement('div');
-  overlay.className = 'blocked-overlay' + (user.blocked ? ' visible' : '');
-  overlay.innerHTML = `
-    <div class="blocked-overlay-icon">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/>
-      </svg>
-    </div>
-    <h4>User Blocked</h4>
-    <p>You've blocked ${escapeHTML(user.name)}.<br/>Unblock from the ⋯ menu to resume messaging.</p>
-  `;
-  messagesArea.appendChild(overlay);
-
-  if (!user.blocked) {
-    const divider = document.createElement('div');
-    divider.className = 'date-divider';
-    divider.innerHTML = '<span>Today</span>';
-    messagesArea.appendChild(divider);
-
-    let prevFrom = null;
-    user.messages.forEach((msg, idx) => {
-      const isGap = prevFrom !== msg.from && idx > 0;
-      renderBubble(msg, user, isGap, false);
-      prevFrom = msg.from;
-    });
-  }
-
-  scrollToBottom(false);
-
-  // Input disabled state for blocked users
-  updateInputBlockedState(user);
-}
-
-function updateInputBlockedState(user) {
-  const isBlocked = user && user.blocked;
-  msgInput.disabled      = isBlocked;
-  sendBtn.disabled       = isBlocked;
-  msgInput.placeholder   = isBlocked ? 'You blocked this user' : 'Type a message…';
-  msgInput.style.opacity = isBlocked ? '0.4' : '1';
-  sendBtn.style.opacity  = isBlocked ? '0.3' : '1';
-}
-
-function renderBubble(msg, user, gap = false, smooth = true) {
-  const isSent = msg.from === 'me';
-  const div = document.createElement('div');
-  div.className = `message ${isSent ? 'sent' : 'received'}${gap ? ' gap-above' : ''}`;
-  div.innerHTML = `
-    <div class="msg-avatar ${isSent ? 'av-0' : user.avatarClass} ${!isSent && !gap ? 'hidden-avatar' : ''}">
-      ${isSent ? 'Y' : user.initials}
-    </div>
-    <div class="msg-body">
-      <div class="msg-bubble">${escapeHTML(msg.text)}</div>
-      <span class="msg-time">${msg.time}</span>
-    </div>
-  `;
-  messagesArea.appendChild(div);
-  if (smooth) scrollToBottom(true);
-}
-
-// ============================================================
-// RENDER GROUP MESSAGES
-// ============================================================
-
-function renderGroupMessages(group) {
-  messagesArea.innerHTML = '';
-  const divider = document.createElement('div');
-  divider.className = 'date-divider';
-  divider.innerHTML = '<span>Today</span>';
-  messagesArea.appendChild(divider);
-
-  let prevSender = null;
-  group.messages.forEach((msg, idx) => {
-    const isGap = prevSender !== msg.senderId && idx > 0;
-    renderGroupBubble(msg, group, isGap, false);
-    prevSender = msg.senderId;
-  });
-  scrollToBottom(false);
-}
-
-function renderGroupBubble(msg, group, gap = false, smooth = true) {
-  const isSent = msg.senderId === 'me';
-  const sender = isSent ? null : getUserById(msg.senderId);
-
-  const div = document.createElement('div');
-  div.className = `message ${isSent ? 'sent' : 'received'}${gap ? ' gap-above' : ''}`;
-
-  let avatarHTML = '';
-  let senderNameHTML = '';
-
-  if (!isSent) {
-    const avatarClass = sender ? sender.avatarClass : 'av-0';
-    const initials = sender ? sender.initials : msg.senderName.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
-    const hidden = !gap ? 'hidden-avatar' : '';
-    avatarHTML = `<div class="msg-avatar ${avatarClass} ${hidden}">${initials}</div>`;
-    if (gap) {
-      senderNameHTML = `<span class="msg-sender-name">${escapeHTML(msg.senderName)}</span>`;
+    // Find chat in cache first
+    let chat = allChats.find(c => c._id === chatId);
+    if (!chat) {
+      const data = await chatsAPI.getOne(chatId);
+      chat = data.chat;
     }
+
+    activeChatId  = chatId;
+    activeIsGroup = chat.isGroup;
+
+    // Join socket room
+    if (socket) socket.emit('chat:join', { chatId });
+
+    // ── Update header ─────────────────────────────────────
+    if (!chat.isGroup) {
+      const partner = getDMPartner(chat);
+      chatHeaderAvatar.className   = `chat-header-avatar ${partner?.avatarClass || 'av-0'}`;
+      chatHeaderAvatar.textContent = partner?.initials || '?';
+      chatHeaderAvatar.classList.remove('hidden');
+      chatHeaderGroupAvatar.classList.add('hidden');
+      chatHeaderName.textContent   = partner?.displayName || 'Unknown';
+      chatHeaderStatus.textContent = partner?.isOnline ? '● Online' : '● Offline';
+      chatHeaderStatus.className   = `chat-header-status${partner?.isOnline ? ' is-online' : ''}`;
+      groupInfoBtn.classList.add('hidden');
+      moreOptionsBtn.classList.remove('hidden');
+    } else {
+      chatHeaderAvatar.classList.add('hidden');
+      chatHeaderGroupAvatar.classList.remove('hidden');
+      chatHeaderGroupAvatarInner.innerHTML = buildGroupAvatarMini(chat);
+      chatHeaderName.textContent   = `${chat.icon || '🚀'} ${chat.name}`;
+      chatHeaderStatus.textContent = `${chat.members.length} members`;
+      chatHeaderStatus.className   = 'chat-header-status';
+      groupInfoBtn.classList.remove('hidden');
+      moreOptionsBtn.classList.add('hidden');
+    }
+
+    emptyState.classList.add('hidden');
+    activeChat.classList.remove('hidden');
+    sidebar.classList.add('hidden-mobile');
+    hideNav();
+
+    // ── Load messages ─────────────────────────────────────
+    currentPage = 1;
+    await loadMessages(chatId, 1, false);
+
+    // Re-render sidebar to clear unread badge
+    renderChatList();
+    renderGroupList();
+
+    msgInput.focus();
+  } catch (err) {
+    console.error('openChat error:', err.message);
+    showGlobalToast('Could not open chat', 'error');
+  }
+}
+
+// ── Open DM by userId (create if doesn't exist) ───────────
+async function openDMWithUser(userId) {
+  try {
+    const data = await chatsAPI.createDM(userId);
+    const chat = data.chat;
+
+    // Add to cache if not already there
+    if (!allChats.find(c => c._id === chat._id)) {
+      allChats.unshift(chat);
+    }
+
+    await openChat(chat._id);
+  } catch (err) {
+    console.error('openDMWithUser error:', err.message);
+    showGlobalToast('Could not open DM', 'error');
+  }
+}
+
+// ============================================================
+// LOAD MESSAGES
+// ============================================================
+
+async function loadMessages(chatId, page = 1, prepend = false) {
+  try {
+    const data = await messagesAPI.getAll(chatId, page);
+    const msgs = data.messages || [];
+    hasMoreMessages = data.pagination?.hasMore || false;
+
+    if (!prepend) {
+      messagesArea.innerHTML = '';
+      const divider = document.createElement('div');
+      divider.className = 'date-divider';
+      divider.innerHTML = '<span>Today</span>';
+      messagesArea.appendChild(divider);
+    }
+
+    const me = getMe();
+    msgs.forEach((msg, idx) => {
+      const prevMsg = msgs[idx - 1];
+      const gap = !prevMsg || prevMsg.sender?._id !== msg.sender?._id;
+      appendMessage(msg, gap, false);
+    });
+
+    if (!prepend) scrollToBottom(false);
+
+  } catch (err) {
+    console.error('loadMessages error:', err.message);
+  }
+}
+
+// ============================================================
+// RENDER A SINGLE MESSAGE BUBBLE
+// ============================================================
+
+function appendMessage(msg, gap = true, smooth = true) {
+  const me    = getMe();
+  const isSent = msg.sender?._id === me?._id;
+  const chat  = allChats.find(c => c._id === (activeChatId));
+
+  const div = document.createElement('div');
+  div.className = `message ${isSent ? 'sent' : 'received'}${gap ? ' gap-above' : ''}`;
+  div.dataset.msgId = msg._id;
+
+  let senderNameHTML = '';
+  if (!isSent && chat?.isGroup && gap) {
+    senderNameHTML = `<span class="msg-sender-name">${escapeHTML(msg.sender?.displayName || '')}</span>`;
   }
 
   div.innerHTML = `
-    ${avatarHTML}
+    <div class="msg-avatar ${isSent ? 'av-0' : (msg.sender?.avatarClass || 'av-0')} ${!gap ? 'hidden-avatar' : ''}">
+      ${isSent ? (me?.initials || 'Y') : (msg.sender?.initials || '?')}
+    </div>
     <div class="msg-body">
       ${senderNameHTML}
       <div class="msg-bubble">${escapeHTML(msg.text)}</div>
-      <span class="msg-time">${msg.time}</span>
+      <span class="msg-time">${formatTime(msg.createdAt)}</span>
     </div>
   `;
-
-  if (!isSent) {
-    const avatarEl = div.querySelector('.msg-avatar:not(.hidden-avatar)');
-    if (avatarEl && sender) {
-      avatarEl.style.cursor = 'pointer';
-      avatarEl.title = sender.name;
-      avatarEl.addEventListener('click', () => openProfileModal(sender));
-    }
-  }
 
   messagesArea.appendChild(div);
   if (smooth) scrollToBottom(true);
@@ -625,200 +483,77 @@ function renderGroupBubble(msg, group, gap = false, smooth = true) {
 // SEND MESSAGE
 // ============================================================
 
-function sendMessage() {
+async function sendMessage() {
   const text = msgInput.value.trim();
-  if (!text) return;
+  if (!text || !activeChatId) return;
 
-  if (activeUserId !== null) {
-    sendDMMessage(text);
-  } else if (activeGroupId !== null) {
-    sendGroupMessage(text);
+  msgInput.value = '';
+
+  // Stop typing indicator
+  if (socket) socket.emit('typing:stop', { chatId: activeChatId, userId: getMe()?._id });
+
+  try {
+    await messagesAPI.send(activeChatId, text);
+    // Message will arrive via socket event message:new
+    // Also refresh sidebar
+    refreshChatList();
+  } catch (err) {
+    console.error('sendMessage error:', err.message);
+    showGlobalToast('Failed to send message', 'error');
+    msgInput.value = text; // restore text on failure
   }
 }
 
-function sendDMMessage(text) {
-  const user = getUserById(activeUserId);
-  if (!user || user.blocked) return;
-
-  const msg = { from: 'me', text, time: now() };
-  user.messages.push(msg);
-  user.lastTime = now();
-
-  const prevMsg = user.messages[user.messages.length - 2];
-  const gap = prevMsg && prevMsg.from !== 'me';
-
-  renderBubble(msg, user, gap, true);
-  renderChatList(searchInput.value);
-  msgInput.value = '';
-
-  if (user.online) scheduleFakeReply(user);
-}
-
-function sendGroupMessage(text) {
-  const group = getGroupById(activeGroupId);
-  const msg = { senderId: 'me', senderName: 'You', text, time: now() };
-  group.messages.push(msg);
-  group.lastTime = now();
-
-  const prevMsg = group.messages[group.messages.length - 2];
-  const gap = prevMsg && prevMsg.senderId !== 'me';
-
-  renderGroupBubble(msg, group, gap, true);
-  renderGroupList(searchInput.value);
-  msgInput.value = '';
-
-  scheduleGroupFakeReply(group);
-}
-
 // ============================================================
-// FAKE TYPING + AUTO-REPLY — DM
+// TYPING INDICATOR — emit to socket
 // ============================================================
 
-const FAKE_REPLIES = [
-  "Sounds good to me!",
-  "Let me check that and get back to you.",
-  "Yeah, totally agree on that.",
-  "Haha good point 😄",
-  "Can we sync on this tomorrow?",
-  "That makes sense, I'll take a look.",
-  "Nice! Sending over the file now.",
-  "Wait, really? That's wild.",
-  "On it 👍",
-  "I'll ping you when it's done.",
-  "Sure, no problem!",
-  "Hmm let me think about that…",
-  "For sure, sounds like a plan.",
-  "Can't right now, in a meeting. BRB.",
-  "That's exactly what I was thinking.",
-];
+msgInput.addEventListener('input', () => {
+  if (!activeChatId || !socket) return;
+  const me = getMe();
 
-const GROUP_REPLIES = [
-  "100% agree with that approach",
-  "Let's ship it 🚀",
-  "Good call, I'll update the doc",
-  "lol same tbh",
-  "Anyone else seeing this issue?",
-  "Just pushed the fix btw",
-  "OK let me check the logs real quick",
-  "This looks way better now",
-  "Can someone review when free?",
-  "Yep that's on me, fixing now",
-  "Ngl this is the best one yet",
-  "Wait what happened to staging??",
-];
+  socket.emit('typing:start', {
+    chatId:   activeChatId,
+    userId:   me?._id,
+    userName: me?.firstName || me?.displayName || 'Someone',
+  });
 
-function scheduleFakeReply(user) {
-  if (user.id !== activeUserId) return;
-  if (user.blocked) return;
   clearTimeout(typingTimer);
-
   typingTimer = setTimeout(() => {
-    if (user.id !== activeUserId) return;
-    typingName.textContent = user.name.split(' ')[0];
-    typingIndicator.classList.remove('hidden');
-    scrollToBottom(true);
-
-    typingTimer = setTimeout(() => {
-      if (user.id !== activeUserId) return;
-      typingIndicator.classList.add('hidden');
-
-      const replyText = FAKE_REPLIES[Math.floor(Math.random() * FAKE_REPLIES.length)];
-      const replyMsg = { from: 'them', text: replyText, time: now() };
-      user.messages.push(replyMsg);
-      user.lastTime = now();
-
-      const prevMsg = user.messages[user.messages.length - 2];
-      const gap = prevMsg && prevMsg.from !== 'them';
-
-      renderBubble(replyMsg, user, gap, true);
-      renderChatList(searchInput.value);
-
-      // If muted, don't show unread badge
-      if (!user.muted) {
-        // unread already incremented via data; sidebar re-render handles badge
-      }
-    }, 1500 + Math.random() * 1500);
-
-  }, 1200 + Math.random() * 1400);
-}
-
-function scheduleGroupFakeReply(group) {
-  if (group.id !== activeGroupId) return;
-  clearTimeout(typingTimer);
-
-  const onlineMembers = group.memberIds.map(id => getUserById(id)).filter(u => u && u.online);
-  if (!onlineMembers.length) return;
-
-  const randomMember = onlineMembers[Math.floor(Math.random() * onlineMembers.length)];
-
-  typingTimer = setTimeout(() => {
-    if (group.id !== activeGroupId) return;
-    typingName.textContent = randomMember.name.split(' ')[0];
-    typingIndicator.classList.remove('hidden');
-    scrollToBottom(true);
-
-    typingTimer = setTimeout(() => {
-      if (group.id !== activeGroupId) return;
-      typingIndicator.classList.add('hidden');
-
-      const replyText = GROUP_REPLIES[Math.floor(Math.random() * GROUP_REPLIES.length)];
-      const replyMsg = {
-        senderId: randomMember.id,
-        senderName: randomMember.name,
-        text: replyText,
-        time: now(),
-      };
-      group.messages.push(replyMsg);
-      group.lastTime = now();
-
-      const prevMsg = group.messages[group.messages.length - 2];
-      const gap = prevMsg && prevMsg.senderId !== randomMember.id;
-
-      renderGroupBubble(replyMsg, group, gap, true);
-      renderGroupList(searchInput.value);
-    }, 1400 + Math.random() * 1600);
-
-  }, 1400 + Math.random() * 1600);
-}
+    socket.emit('typing:stop', { chatId: activeChatId, userId: me?._id });
+  }, 2000);
+});
 
 // ============================================================
-// BOTTOM NAV — TAB SWITCHING
+// PRESENCE UPDATE
 // ============================================================
 
-function switchTab(targetViewId, clickedTab) {
-  navTabs.forEach(t => t.classList.remove('active'));
-  clickedTab.classList.add('active');
+function updateUserPresence(userId, isOnline) {
+  // Update cached users
+  allUsers = allUsers.map(u =>
+    u._id === userId ? { ...u, isOnline } : u
+  );
 
-  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-  const targetView = document.getElementById(targetViewId);
-  if (targetView) targetView.classList.add('active');
+  // Update cached chats
+  allChats = allChats.map(chat => ({
+    ...chat,
+    members: chat.members.map(m =>
+      m._id === userId ? { ...m, isOnline } : m
+    ),
+  }));
 
-  if (window.innerWidth <= 680) {
-    if (targetViewId !== 'view-chats') {
-      sidebar.classList.add('hidden-mobile');
-    } else {
-      if (activeUserId === null && activeGroupId === null) {
-        sidebar.classList.remove('hidden-mobile');
-      }
+  // Update chat header if this user is the active DM partner
+  if (activeChatId && !activeIsGroup) {
+    const chat    = allChats.find(c => c._id === activeChatId);
+    const partner = chat ? getDMPartner(chat) : null;
+    if (partner?._id === userId) {
+      chatHeaderStatus.textContent = isOnline ? '● Online' : '● Offline';
+      chatHeaderStatus.className   = `chat-header-status${isOnline ? ' is-online' : ''}`;
     }
   }
+
+  renderChatList();
 }
-
-navTabs.forEach(tab => {
-  tab.addEventListener('click', () => switchTab(tab.dataset.view, tab));
-});
-
-// ============================================================
-// SIDEBAR SEARCH
-// ============================================================
-
-searchInput.addEventListener('input', () => {
-  if (activeSidebarTab === 'dms') {
-    renderChatList(searchInput.value);
-  } else {
-    renderGroupList(searchInput.value);
-  }
-});
 
 // ============================================================
 // SEND BUTTON + ENTER KEY
@@ -833,14 +568,16 @@ msgInput.addEventListener('keydown', e => {
 });
 
 // ============================================================
-// BACK BUTTON (mobile)
+// BACK BUTTON
 // ============================================================
 
 backBtn.addEventListener('click', () => {
-   showNav();
+  if (socket && activeChatId) {
+    socket.emit('chat:leave', { chatId: activeChatId });
+  }
+  showNav();
   sidebar.classList.remove('hidden-mobile');
-  activeUserId  = null;
-  activeGroupId = null;
+  activeChatId = null;
   emptyState.classList.remove('hidden');
   activeChat.classList.add('hidden');
   clearTimeout(typingTimer);
@@ -851,12 +588,43 @@ backBtn.addEventListener('click', () => {
 });
 
 // ============================================================
+// SEARCH
+// ============================================================
+
+searchInput.addEventListener('input', () => {
+  if (activeSidebarTab === 'dms') renderChatList(searchInput.value);
+  else renderGroupList(searchInput.value);
+});
+
+// ============================================================
+// BOTTOM NAV
+// ============================================================
+
+navTabs.forEach(tab => {
+  tab.addEventListener('click', () => {
+    navTabs.forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    const target = document.getElementById(tab.dataset.view);
+    if (target) target.classList.add('active');
+
+    if (window.innerWidth <= 680) {
+      if (tab.dataset.view !== 'view-chats') {
+        sidebar.classList.add('hidden-mobile');
+      } else if (!activeChatId) {
+        sidebar.classList.remove('hidden-mobile');
+      }
+    }
+  });
+});
+
+// ============================================================
 // GROUP INFO BUTTON
 // ============================================================
 
 groupInfoBtn.addEventListener('click', () => {
-  const group = getGroupById(activeGroupId);
-  if (group) openGroupInfoModal(group);
+  const chat = allChats.find(c => c._id === activeChatId);
+  if (chat) openGroupInfoModal(chat);
 });
 
 // ============================================================
@@ -872,24 +640,24 @@ const cancelNewGroupBtn = document.getElementById('cancelNewGroupBtn');
 const createGroupBtn    = document.getElementById('createGroupBtn');
 
 function openNewGroupModal() {
-  newGroupName.value = '';
-  selectedGroupIcon = '🚀';
-  selectedMemberIds = new Set();
+  newGroupName.value    = '';
+  selectedGroupIcon     = '🚀';
+  selectedMemberIds     = new Set();
 
   groupIconPicker.querySelectorAll('.gip-btn').forEach(b => {
     b.classList.toggle('active', b.dataset.icon === '🚀');
   });
 
   memberSelector.innerHTML = '';
-  USERS.forEach(user => {
+  allUsers.forEach(user => {
     const chip = document.createElement('button');
-    chip.className = 'member-chip';
-    chip.dataset.uid = user.id;
-    chip.innerHTML = `
-      <div class="mc-avatar ${user.avatarClass}">${user.initials}</div>
-      <span>${user.name.split(' ')[0]}</span>
+    chip.className    = 'member-chip';
+    chip.dataset.uid  = user._id;
+    chip.innerHTML    = `
+      <div class="mc-avatar ${user.avatarClass || 'av-0'}">${user.initials || '?'}</div>
+      <span>${user.displayName?.split(' ')[0] || user.email}</span>
     `;
-    chip.addEventListener('click', () => toggleMember(user.id, chip));
+    chip.addEventListener('click', () => toggleMember(user._id, chip));
     memberSelector.appendChild(chip);
   });
 
@@ -916,13 +684,13 @@ function toggleMember(uid, chipEl) {
 function renderSelectedMembers() {
   selectedMembersEl.innerHTML = '';
   selectedMemberIds.forEach(uid => {
-    const user = getUserById(uid);
+    const user = allUsers.find(u => u._id === uid);
     if (!user) return;
     const tag = document.createElement('div');
     tag.className = 'sm-tag';
     tag.innerHTML = `
-      <div class="sm-avatar ${user.avatarClass}">${user.initials}</div>
-      <span>${user.name.split(' ')[0]}</span>
+      <div class="sm-avatar ${user.avatarClass || 'av-0'}">${user.initials || '?'}</div>
+      <span>${user.displayName?.split(' ')[0] || user.email}</span>
       <button class="sm-remove" data-uid="${uid}">×</button>
     `;
     tag.querySelector('.sm-remove').addEventListener('click', () => {
@@ -948,7 +716,7 @@ newGroupModal.addEventListener('click', e => {
   if (e.target === newGroupModal) closeNewGroupModal();
 });
 
-createGroupBtn.addEventListener('click', () => {
+createGroupBtn.addEventListener('click', async () => {
   const name = newGroupName.value.trim();
   if (!name) {
     newGroupName.style.borderColor = '#f87171';
@@ -961,31 +729,29 @@ createGroupBtn.addEventListener('click', () => {
     return;
   }
 
-  const newGroup = {
-    id: ++groupIdCounter,
-    type: 'group',
-    name,
-    icon: selectedGroupIcon,
-    memberIds: [...selectedMemberIds],
-    unread: 0,
-    lastTime: now(),
-    messages: [
-      {
-        senderId: 'me',
-        senderName: 'You',
-        text: `${selectedGroupIcon} Group created! Welcome everyone.`,
-        time: now(),
-      }
-    ],
-  };
+  try {
+    createGroupBtn.disabled     = true;
+    createGroupBtn.textContent  = 'Creating…';
 
-  GROUPS.unshift(newGroup);
-  closeNewGroupModal();
-  showGlobalToast(`"${name}" created`, 'success');
+    const data = await chatsAPI.createGroup({
+      name,
+      icon:      selectedGroupIcon,
+      memberIds: [...selectedMemberIds],
+    });
 
-  switchSidebarTab('groups');
-  renderGroupList();
-  openGroupChat(newGroup.id);
+    allChats.unshift(data.chat);
+    closeNewGroupModal();
+    showGlobalToast(`"${name}" created`, 'success');
+    switchSidebarTab('groups');
+    renderGroupList();
+    await openChat(data.chat._id);
+
+  } catch (err) {
+    showGlobalToast(err.message || 'Failed to create group', 'error');
+  } finally {
+    createGroupBtn.disabled    = false;
+    createGroupBtn.textContent = 'Create chatroom';
+  }
 });
 
 newGroupBtn.addEventListener('click', openNewGroupModal);
@@ -1005,48 +771,37 @@ const giLeaveBtn     = document.getElementById('giLeaveBtn');
 
 const GI_GLOW_COLORS = ['#00d4ff','#a855f7','#f43f5e','#fbbf24','#22d3a5','#fb923c'];
 
-function openGroupInfoModal(group) {
-  giAvatar.innerHTML = buildGroupAvatarMini(group, 'lg');
+function openGroupInfoModal(chat) {
+  const me = getMe();
+  giAvatar.innerHTML = buildGroupAvatarMini(chat) + `<span class="gi-icon-badge">${chat.icon || '🚀'}</span>`;
   giAvatar.className = 'gi-avatar group-avatar-stack lg';
-  giAvatar.innerHTML += `<span class="gi-icon-badge">${group.icon}</span>`;
 
-  const glowColor = GI_GLOW_COLORS[group.id % GI_GLOW_COLORS.length];
+  const glowColor = GI_GLOW_COLORS[chat.members.length % GI_GLOW_COLORS.length];
   giGlow.style.background = glowColor;
 
-  giName.textContent = `${group.icon} ${group.name}`;
-  giMeta.textContent = `${group.memberIds.length + 1} members · Created by You`;
+  giName.textContent = `${chat.icon || '🚀'} ${chat.name}`;
+  giMeta.textContent = `${chat.members.length} members`;
 
   giMembers.innerHTML = '';
-  const youRow = document.createElement('div');
-  youRow.className = 'gi-member-row';
-  youRow.innerHTML = `
-    <div class="gi-member-avatar av-0">Y</div>
-    <div class="gi-member-info">
-      <span class="gi-member-name">You</span>
-      <span class="gi-member-tag" style="color:var(--cyan)">@you · Admin</span>
-    </div>
-    <span class="gi-online-dot online"></span>
-  `;
-  giMembers.appendChild(youRow);
-
-  group.memberIds.forEach(uid => {
-    const user = getUserById(uid);
-    if (!user) return;
-    const row = document.createElement('div');
+  chat.members.forEach(member => {
+    const isMe = member._id === me?._id;
+    const row  = document.createElement('div');
     row.className = 'gi-member-row';
     row.innerHTML = `
-      <div class="gi-member-avatar ${user.avatarClass}">${user.initials}</div>
+      <div class="gi-member-avatar ${member.avatarClass || 'av-0'}">${member.initials || '?'}</div>
       <div class="gi-member-info">
-        <span class="gi-member-name">${user.name}</span>
-        <span class="gi-member-tag">${user.usertag || '@' + user.name.toLowerCase().replace(' ','')}</span>
+        <span class="gi-member-name">${escapeHTML(member.displayName || '')}${isMe ? ' (You)' : ''}</span>
+        <span class="gi-member-tag">${member.email || ''}</span>
       </div>
-      <span class="gi-online-dot ${user.online ? 'online' : 'offline'}"></span>
+      <span class="gi-online-dot ${member.isOnline ? 'online' : 'offline'}"></span>
     `;
-    row.style.cursor = 'pointer';
-    row.addEventListener('click', () => {
-      closeGroupInfoModal();
-      openProfileModal(user);
-    });
+    if (!isMe) {
+      row.style.cursor = 'pointer';
+      row.addEventListener('click', () => {
+        closeGroupInfoModal();
+        openProfileModal(member);
+      });
+    }
     giMembers.appendChild(row);
   });
 
@@ -1062,30 +817,35 @@ groupInfoModal.addEventListener('click', e => {
   if (e.target === groupInfoModal) closeGroupInfoModal();
 });
 
-giLeaveBtn.addEventListener('click', () => {
-  const group = getGroupById(activeGroupId);
-  if (!group) return;
-  const idx = GROUPS.indexOf(group);
-  if (idx > -1) GROUPS.splice(idx, 1);
-  closeGroupInfoModal();
-  renderGroupList();
-  activeGroupId = null;
-  emptyState.classList.remove('hidden');
-  activeChat.classList.add('hidden');
-  showNav();
-  showGlobalToast(`Left "${group.name}"`, 'error');
+giLeaveBtn.addEventListener('click', async () => {
+  const chat = allChats.find(c => c._id === activeChatId);
+  if (!chat) return;
+
+  try {
+    await chatsAPI.leaveGroup(activeChatId);
+    allChats = allChats.filter(c => c._id !== activeChatId);
+    closeGroupInfoModal();
+    renderGroupList();
+    activeChatId = null;
+    emptyState.classList.remove('hidden');
+    activeChat.classList.add('hidden');
+    showNav();
+    showGlobalToast(`Left "${chat.name}"`, 'error');
+  } catch (err) {
+    showGlobalToast(err.message || 'Failed to leave group', 'error');
+  }
 });
 
 // ============================================================
-// SETTINGS PAGE LOGIC
+// SETTINGS PAGE
 // ============================================================
 
 function calcStrength(pw) {
   let score = 0;
-  if (pw.length >= 8)  score++;
-  if (pw.length >= 12) score++;
-  if (/[A-Z]/.test(pw)) score++;
-  if (/[0-9]/.test(pw)) score++;
+  if (pw.length >= 8)           score++;
+  if (pw.length >= 12)          score++;
+  if (/[A-Z]/.test(pw))        score++;
+  if (/[0-9]/.test(pw))        score++;
   if (/[^A-Za-z0-9]/.test(pw)) score++;
   return score;
 }
@@ -1095,13 +855,12 @@ function updateStrengthUI(pw) {
   const label = document.getElementById('pwStrengthLabel');
   if (!fill || !label) return;
   if (!pw) { fill.style.width = '0%'; label.textContent = ''; return; }
-  const s = calcStrength(pw);
-  const pct   = (s / 5) * 100;
+  const s      = calcStrength(pw);
   const colors = ['#ef4444','#f97316','#eab308','#22d3a5','#00d4ff'];
   const labels = ['Very weak','Weak','Fair','Strong','Very strong'];
-  fill.style.width = pct + '%';
+  fill.style.width      = (s / 5 * 100) + '%';
   fill.style.background = colors[Math.min(s - 1, 4)] || '#ef4444';
-  label.textContent = pw ? (labels[Math.min(s - 1, 4)] || 'Very weak') : '';
+  label.textContent     = pw ? (labels[Math.min(s - 1, 4)] || 'Very weak') : '';
 }
 
 const newPwInput = document.getElementById('newPw');
@@ -1112,7 +871,7 @@ document.addEventListener('click', e => {
   if (!btn) return;
   const input = document.getElementById(btn.dataset.target);
   if (!input) return;
-  input.type = input.type === 'password' ? 'text' : 'password';
+  input.type  = input.type === 'password' ? 'text' : 'password';
   btn.style.color = input.type === 'text' ? 'var(--cyan)' : '';
 });
 
@@ -1133,32 +892,39 @@ function resetPasswordForm() {
     if (el) el.value = '';
   });
   updateStrengthUI('');
-  showInlineToast('', '', false);
+  showInlineToast('pwToast', '', '');
 }
 
 const savePwBtn   = document.getElementById('savePwBtn');
 const cancelPwBtn = document.getElementById('cancelPwBtn');
 
 if (savePwBtn) {
-  savePwBtn.addEventListener('click', () => {
+  savePwBtn.addEventListener('click', async () => {
     const cur  = document.getElementById('currentPw').value;
     const nw   = document.getElementById('newPw').value;
     const conf = document.getElementById('confirmPw').value;
+
     if (!cur || !nw || !conf) { showInlineToast('pwToast', 'Please fill all fields', 'error'); return; }
     if (nw !== conf)          { showInlineToast('pwToast', 'Passwords do not match', 'error'); return; }
     if (calcStrength(nw) < 2) { showInlineToast('pwToast', 'Password too weak', 'error'); return; }
+
     savePwBtn.textContent = 'Updating…';
-    savePwBtn.disabled = true;
-    setTimeout(() => {
-      savePwBtn.textContent = 'Update Password';
-      savePwBtn.disabled = false;
+    savePwBtn.disabled    = true;
+
+    try {
+      await authAPI.updatePassword({ currentPassword: cur, newPassword: nw });
       showInlineToast('pwToast', '✓ Password updated successfully', 'success');
       setTimeout(() => {
         changePassBody.classList.remove('open');
         changePassRow.classList.remove('open');
         resetPasswordForm();
       }, 1600);
-    }, 900);
+    } catch (err) {
+      showInlineToast('pwToast', err.message || 'Update failed', 'error');
+    } finally {
+      savePwBtn.textContent = 'Update Password';
+      savePwBtn.disabled    = false;
+    }
   });
 }
 
@@ -1175,7 +941,7 @@ function showInlineToast(id, msg, type) {
   if (!el) return;
   if (!msg) { el.classList.add('hidden'); return; }
   el.textContent = msg;
-  el.className = 'inline-toast ' + type;
+  el.className   = 'inline-toast ' + type;
 }
 
 // Delete account
@@ -1197,20 +963,29 @@ if (cancelDeleteBtn) {
   });
 }
 if (confirmDeleteBtn) {
-  confirmDeleteBtn.addEventListener('click', () => {
+  confirmDeleteBtn.addEventListener('click', async () => {
     const pw = document.getElementById('deleteConfirmPw').value;
     if (!pw) {
       document.getElementById('deleteConfirmPw').style.borderColor = '#f87171';
       return;
     }
     confirmDeleteBtn.textContent = 'Deleting…';
-    confirmDeleteBtn.disabled = true;
-    setTimeout(() => {
+    confirmDeleteBtn.disabled    = true;
+
+    try {
+      await usersAPI.deleteAccount();
       deleteModal.classList.add('hidden');
       showGlobalToast('Account deleted — goodbye.', 'error');
+      setTimeout(() => {
+        localStorage.clear();
+        location.reload();
+      }, 1500);
+    } catch (err) {
+      showGlobalToast(err.message || 'Delete failed', 'error');
+    } finally {
       confirmDeleteBtn.textContent = 'Yes, Delete Everything';
-      confirmDeleteBtn.disabled = false;
-    }, 1200);
+      confirmDeleteBtn.disabled    = false;
+    }
   });
 }
 
@@ -1227,7 +1002,14 @@ if (deleteModal) {
 function setupToggle(id, onMsg, offMsg) {
   const el = document.getElementById(id);
   if (!el) return;
-  el.addEventListener('change', () => showGlobalToast(el.checked ? onMsg : offMsg, 'success'));
+  el.addEventListener('change', async () => {
+    showGlobalToast(el.checked ? onMsg : offMsg, 'success');
+    try {
+      await usersAPI.updateProfile({
+        settings: { [id.replace('Toggle','').toLowerCase()]: el.checked }
+      });
+    } catch (_) {}
+  });
 }
 setupToggle('notifToggle',       'Notifications enabled',  'Notifications disabled');
 setupToggle('onlineStatusToggle','Online status visible',  'Online status hidden');
@@ -1242,9 +1024,8 @@ if (themeSwitcher) {
     btn.addEventListener('click', () => {
       themeSwitcher.querySelectorAll('.theme-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
-      const t = btn.dataset.theme;
-      themeSubLabel.textContent = t === 'dark' ? 'Dark mode active' : 'Light mode active';
-      showGlobalToast(t === 'dark' ? 'Dark theme applied' : 'Light theme applied', 'success');
+      themeSubLabel.textContent = btn.dataset.theme === 'dark' ? 'Dark mode active' : 'Light mode active';
+      showGlobalToast(btn.dataset.theme === 'dark' ? 'Dark theme applied' : 'Light theme applied', 'success');
     });
   });
 }
@@ -1284,7 +1065,8 @@ if (avatarModal) {
       pendingAvatarImg = ev.target.result;
       avatarModal.querySelectorAll('.ap-option').forEach(o => o.classList.remove('active'));
       uploadBtn.classList.add('active');
-      uploadBtn.querySelector('.ap-swatch').innerHTML = `<img src="${pendingAvatarImg}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" />`;
+      uploadBtn.querySelector('.ap-swatch').innerHTML =
+        `<img src="${pendingAvatarImg}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" />`;
     };
     reader.readAsDataURL(file);
   });
@@ -1293,21 +1075,31 @@ if (avatarModal) {
 if (cancelAvatarBtn) cancelAvatarBtn.addEventListener('click', () => avatarModal.classList.add('hidden'));
 
 if (saveAvatarBtn) {
-  saveAvatarBtn.addEventListener('click', () => {
-    if (pendingAvatarImg) {
-      settingsAvatar.innerHTML = `<img src="${pendingAvatarImg}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" />`;
-      if (selfAvatar) { selfAvatar.innerHTML = settingsAvatar.innerHTML; selfAvatar.className = 'user-avatar self-avatar'; }
-    } else {
-      settingsAvatar.className = `profile-avatar ${pendingAvatarClass}`;
-      settingsAvatar.textContent = 'Y';
-      if (selfAvatar) { selfAvatar.className = `user-avatar self-avatar ${pendingAvatarClass}`; selfAvatar.textContent = 'Y'; }
+  saveAvatarBtn.addEventListener('click', async () => {
+    try {
+      if (pendingAvatarImg) {
+        settingsAvatar.innerHTML = `<img src="${pendingAvatarImg}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" />`;
+        if (selfAvatar) { selfAvatar.innerHTML = settingsAvatar.innerHTML; selfAvatar.className = 'user-avatar self-avatar'; }
+      } else {
+        settingsAvatar.className   = `profile-avatar ${pendingAvatarClass}`;
+        settingsAvatar.textContent = getMe()?.initials || 'Y';
+        if (selfAvatar) {
+          selfAvatar.className   = `user-avatar self-avatar ${pendingAvatarClass}`;
+          selfAvatar.textContent = getMe()?.initials || 'Y';
+        }
+        await usersAPI.updateProfile({ avatarClass: pendingAvatarClass });
+      }
+      avatarModal.classList.add('hidden');
+      showGlobalToast('Avatar updated', 'success');
+    } catch (err) {
+      showGlobalToast('Failed to save avatar', 'error');
     }
-    avatarModal.classList.add('hidden');
-    showGlobalToast('Avatar updated', 'success');
   });
 }
 
-if (avatarModal) avatarModal.addEventListener('click', e => { if (e.target === avatarModal) avatarModal.classList.add('hidden'); });
+if (avatarModal) avatarModal.addEventListener('click', e => {
+  if (e.target === avatarModal) avatarModal.classList.add('hidden');
+});
 
 // ============================================================
 // GLOBAL TOAST
@@ -1319,8 +1111,8 @@ function showGlobalToast(msg, type = 'success') {
   if (!el) return;
   clearTimeout(toastTimeout);
   el.textContent = msg;
-  el.className = `global-toast ${type}`;
-  toastTimeout = setTimeout(() => el.classList.add('hidden'), 2800);
+  el.className   = `global-toast ${type}`;
+  toastTimeout   = setTimeout(() => el.classList.add('hidden'), 2800);
 }
 
 // ============================================================
@@ -1352,22 +1144,22 @@ const pmCopyLabel       = document.querySelector('.pm-copy-label');
 const pmMessageBtn      = document.getElementById('pmMessageBtn');
 
 const GLOW_COLORS = {
-  'av-0': '#00d4ff', 'av-1': '#a855f7', 'av-2': '#f43f5e',
-  'av-3': '#fbbf24', 'av-4': '#22d3a5', 'av-5': '#fb923c',
+  'av-0':'#00d4ff','av-1':'#a855f7','av-2':'#f43f5e',
+  'av-3':'#fbbf24','av-4':'#22d3a5','av-5':'#fb923c',
 };
 
 function openProfileModal(user) {
-  pmAvatar.className = `pm-avatar ${user.avatarClass}`;
-  pmAvatar.textContent = user.initials;
-  profileModalTag.textContent = user.usertag || '@' + user.name.toLowerCase().replace(' ','');
-  pmGlow.style.background = GLOW_COLORS[user.avatarClass] || '#00d4ff';
+  pmAvatar.className    = `pm-avatar ${user.avatarClass || 'av-0'}`;
+  pmAvatar.textContent  = user.initials || '?';
+  profileModalTag.textContent = '@' + (user.displayName || user.email || 'user').toLowerCase().replace(/\s+/g,'');
+  pmGlow.style.background     = GLOW_COLORS[user.avatarClass] || '#00d4ff';
 
   pmMessageBtn.onclick = () => {
     closeProfileModal();
     const chatsTab = document.querySelector('[data-view="view-chats"]');
     if (chatsTab) chatsTab.click();
     switchSidebarTab('dms');
-    setTimeout(() => openChat(user.id), 60);
+    setTimeout(() => openDMWithUser(user._id), 60);
   };
 
   resetCopyBtn();
@@ -1386,32 +1178,33 @@ function resetCopyBtn() {
   pmCopyBtn.classList.remove('copied');
 }
 
-// Delegate: click on sidebar DM avatar
 chatListEl.addEventListener('click', e => {
   const avatarWrap = e.target.closest('.ci-avatar-wrap');
   if (!avatarWrap) return;
   const chatItem = avatarWrap.closest('.chat-item');
   if (!chatItem || chatItem.classList.contains('group-chat-item')) return;
   e.stopPropagation();
-  const user = getUserById(Number(chatItem.dataset.id));
-  if (user) openProfileModal(user);
+  const chatId = chatItem.dataset.id;
+  const chat   = allChats.find(c => c._id === chatId);
+  if (!chat) return;
+  const partner = getDMPartner(chat);
+  if (partner) openProfileModal(partner);
 });
 
-// In-chat header avatar (DM only)
 const chatHeaderAvatarEl = document.getElementById('chatHeaderAvatar');
 if (chatHeaderAvatarEl) {
   chatHeaderAvatarEl.addEventListener('click', () => {
-    if (activeUserId === null) return;
-    const user = getUserById(activeUserId);
-    if (user) openProfileModal(user);
-  });
-  chatHeaderAvatarEl.addEventListener('keydown', e => {
-    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); chatHeaderAvatarEl.click(); }
+    if (!activeChatId || activeIsGroup) return;
+    const chat    = allChats.find(c => c._id === activeChatId);
+    const partner = chat ? getDMPartner(chat) : null;
+    if (partner) openProfileModal(partner);
   });
 }
 
 if (profileModalClose) profileModalClose.addEventListener('click', closeProfileModal);
-if (profileModal)      profileModal.addEventListener('click', e => { if (e.target === profileModal) closeProfileModal(); });
+if (profileModal) profileModal.addEventListener('click', e => {
+  if (e.target === profileModal) closeProfileModal();
+});
 
 if (pmCopyBtn) {
   pmCopyBtn.addEventListener('click', () => {
@@ -1426,42 +1219,27 @@ if (pmCopyBtn) {
 }
 
 // ============================================================
+// 3-DOT CONTEXT MENU
 // ============================================================
-// 3-DOT CONTEXT MENU — DM CHATS
-// ============================================================
-// ============================================================
-
-// ── DOM: locate the existing "More options" button and wrap it ──
-// The button is the last .hdr-btn inside .chat-header-actions.
-// We wrap it in a .hdr-menu-wrap div so the dropdown anchors to it.
 
 const chatHeaderActions = document.querySelector('.chat-header-actions');
-
-// Create the wrapper
 const menuWrap = document.createElement('div');
 menuWrap.className = 'hdr-menu-wrap';
-
-// Grab the existing 3-dot button (last hdr-btn child of actions)
 const moreOptionsBtn = chatHeaderActions.querySelector('.hdr-btn[title="More options"]');
 chatHeaderActions.removeChild(moreOptionsBtn);
 menuWrap.appendChild(moreOptionsBtn);
 
-// Build the dropdown
 const contextMenu = document.createElement('div');
 contextMenu.className = 'chat-context-menu hidden';
 contextMenu.id = 'chatContextMenu';
 contextMenu.innerHTML = `
-  <!-- ① Search Messages (inline search bar) -->
   <div class="ccm-item" id="ccmSearch">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
       <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
     </svg>
     Search Messages
   </div>
-
   <div class="ccm-divider"></div>
-
-  <!-- ② Mute Notifications -->
   <div class="ccm-item" id="ccmMute">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
       <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
@@ -1470,22 +1248,7 @@ contextMenu.innerHTML = `
     Mute Notifications
     <span class="ccm-badge" id="ccmMuteBadge">Off</span>
   </div>
-
   <div class="ccm-divider"></div>
-
-  <!-- ③ Block User -->
-  <div class="ccm-item" id="ccmBlock">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-      <circle cx="12" cy="12" r="10"/>
-      <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/>
-    </svg>
-    Block User
-    <span class="ccm-badge" id="ccmBlockBadge">Off</span>
-  </div>
-
-  <div class="ccm-divider"></div>
-
-  <!-- ④ Clear Chat -->
   <div class="ccm-item danger" id="ccmClear">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
       <polyline points="3 6 5 6 21 6"/>
@@ -1495,8 +1258,6 @@ contextMenu.innerHTML = `
     </svg>
     Clear Chat
   </div>
-
-  <!-- ⑤ Delete Chat -->
   <div class="ccm-item danger" id="ccmDelete">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
       <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
@@ -1505,11 +1266,10 @@ contextMenu.innerHTML = `
     Delete Chat
   </div>
 `;
-
 menuWrap.appendChild(contextMenu);
 chatHeaderActions.insertBefore(menuWrap, chatHeaderActions.firstChild);
 
-// ── In-chat message search bar (injected below the chat header) ──
+// ── In-chat search bar ─────────────────────────────────────
 const msgSearchBar = document.createElement('div');
 msgSearchBar.className = 'msg-search-bar';
 msgSearchBar.id = 'msgSearchBar';
@@ -1521,14 +1281,10 @@ msgSearchBar.innerHTML = `
   <span class="msg-search-count-label" id="msgSearchCountLabel"></span>
   <div class="msg-search-nav">
     <button class="msg-search-nav-btn" id="msgSearchPrev" title="Previous">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-        <path d="M15 18l-6-6 6-6"/>
-      </svg>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>
     </button>
     <button class="msg-search-nav-btn" id="msgSearchNext" title="Next">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-        <path d="M9 18l6-6-6-6"/>
-      </svg>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 18l6-6-6-6"/></svg>
     </button>
   </div>
   <button class="msg-search-close" id="msgSearchClose" title="Close search">
@@ -1537,40 +1293,18 @@ msgSearchBar.innerHTML = `
     </svg>
   </button>
 `;
-
-// Insert after the chat header (first child of activeChat)
 const chatHeader = document.getElementById('chatHeader');
 chatHeader.insertAdjacentElement('afterend', msgSearchBar);
 
-// ── Search state ──
-let msgSearchMatches = [];   // DOM .message elements that matched
-let msgSearchCursor  = -1;   // current highlighted index
-
+let msgSearchMatches = [];
+let msgSearchCursor  = -1;
 const msgSearchInput      = document.getElementById('msgSearchInput');
 const msgSearchCountLabel = document.getElementById('msgSearchCountLabel');
 const msgSearchPrev       = document.getElementById('msgSearchPrev');
 const msgSearchNext       = document.getElementById('msgSearchNext');
 const msgSearchClose      = document.getElementById('msgSearchClose');
 
-// ── Open/Close helpers ──
-
 function openChatContextMenu() {
-  const user = getUserById(activeUserId);
-  if (!user) return;
-
-  // Sync toggle badges
-  const muteBadge  = document.getElementById('ccmMuteBadge');
-  const blockBadge = document.getElementById('ccmBlockBadge');
-
-  muteBadge.textContent  = user.muted   ? 'On'  : 'Off';
-  muteBadge.className    = 'ccm-badge'  + (user.muted   ? ' active'       : '');
-  blockBadge.textContent = user.blocked ? 'On'  : 'Off';
-  blockBadge.className   = 'ccm-badge'  + (user.blocked ? ' danger-active' : '');
-
-  // Update block item label dynamically
-  document.getElementById('ccmBlock').childNodes[2].textContent =
-    user.blocked ? 'Unblock User' : 'Block User';
-
   contextMenu.classList.remove('hidden');
   moreOptionsBtn.classList.add('menu-open');
 }
@@ -1584,33 +1318,22 @@ function closeMsgSearchBar() {
   msgSearchBar.classList.remove('visible');
   msgSearchInput.value = '';
   clearMsgSearchHighlights();
-  msgSearchMatches = [];
-  msgSearchCursor  = -1;
+  msgSearchMatches     = [];
+  msgSearchCursor      = -1;
   msgSearchCountLabel.textContent = '';
 }
 
-// ── Toggle the menu on 3-dot click ──
 moreOptionsBtn.addEventListener('click', e => {
   e.stopPropagation();
-  if (activeUserId === null) return; // only for DMs
-  const isOpen = !contextMenu.classList.contains('hidden');
-  if (isOpen) {
-    closeChatContextMenu();
-  } else {
-    openChatContextMenu();
-  }
+  if (!activeChatId || activeIsGroup) return;
+  contextMenu.classList.contains('hidden') ? openChatContextMenu() : closeChatContextMenu();
 });
 
-// ── Close on outside click ──
 document.addEventListener('click', e => {
   if (!contextMenu.classList.contains('hidden') && !menuWrap.contains(e.target)) {
     closeChatContextMenu();
   }
 });
-
-// ============================================================
-// MENU ACTION: ① Search Messages
-// ============================================================
 
 document.getElementById('ccmSearch').addEventListener('click', () => {
   closeChatContextMenu();
@@ -1618,75 +1341,39 @@ document.getElementById('ccmSearch').addEventListener('click', () => {
   setTimeout(() => msgSearchInput.focus(), 60);
 });
 
-// Live search as user types
-msgSearchInput.addEventListener('input', () => {
-  runMsgSearch(msgSearchInput.value.trim());
-});
-
+msgSearchInput.addEventListener('input',   () => runMsgSearch(msgSearchInput.value.trim()));
 msgSearchInput.addEventListener('keydown', e => {
-  if (e.key === 'Enter') {
-    e.preventDefault();
-    if (e.shiftKey) {
-      navigateMsgSearch(-1);
-    } else {
-      navigateMsgSearch(1);
-    }
-  }
+  if (e.key === 'Enter') { e.preventDefault(); navigateMsgSearch(e.shiftKey ? -1 : 1); }
   if (e.key === 'Escape') closeMsgSearchBar();
 });
-
-msgSearchPrev.addEventListener('click', () => navigateMsgSearch(-1));
-msgSearchNext.addEventListener('click', () => navigateMsgSearch(1));
+msgSearchPrev.addEventListener('click',  () => navigateMsgSearch(-1));
+msgSearchNext.addEventListener('click',  () => navigateMsgSearch(1));
 msgSearchClose.addEventListener('click', closeMsgSearchBar);
 
-/**
- * Searches all rendered .msg-bubble elements for the query string.
- * Hides non-matching messages, highlights matches, scrolls to first.
- */
 function runMsgSearch(query) {
   clearMsgSearchHighlights();
   msgSearchMatches = [];
   msgSearchCursor  = -1;
-
-  if (!query) {
-    msgSearchCountLabel.textContent = '';
-    return;
-  }
-
+  if (!query) { msgSearchCountLabel.textContent = ''; return; }
   const lower = query.toLowerCase();
-  const messages = messagesArea.querySelectorAll('.message');
-
-  messages.forEach(msgEl => {
+  messagesArea.querySelectorAll('.message').forEach(msgEl => {
     const bubble = msgEl.querySelector('.msg-bubble');
     if (!bubble) return;
     const text = bubble.textContent || '';
-
     if (text.toLowerCase().includes(lower)) {
       msgEl.classList.remove('search-hidden');
       msgEl.classList.add('search-match');
-      // Highlight matching text
       bubble.innerHTML = highlightText(escapeHTML(text), escapeHTML(query));
       msgSearchMatches.push(msgEl);
     } else {
       msgEl.classList.add('search-hidden');
-      msgEl.classList.remove('search-match');
     }
   });
-
-  if (msgSearchMatches.length) {
-    msgSearchCursor = 0;
-    scrollToMatch(0);
-    updateSearchCountLabel();
-  } else {
-    msgSearchCountLabel.textContent = 'No results';
-  }
+  if (msgSearchMatches.length) { msgSearchCursor = 0; scrollToMatch(0); }
+  updateSearchCountLabel();
 }
 
-/**
- * Wraps matched text in <mark> tags for highlighting.
- */
 function highlightText(safeText, safeQuery) {
-  // Case-insensitive replace on the safe (HTML-escaped) text
   const regex = new RegExp(safeQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
   return safeText.replace(regex, m => `<mark>${m}</mark>`);
 }
@@ -1695,10 +1382,7 @@ function clearMsgSearchHighlights() {
   messagesArea.querySelectorAll('.message').forEach(msgEl => {
     msgEl.classList.remove('search-hidden', 'search-match');
     const bubble = msgEl.querySelector('.msg-bubble');
-    if (bubble && bubble.querySelector('mark')) {
-      // Re-render plain text (strip marks)
-      bubble.innerHTML = bubble.textContent || '';
-    }
+    if (bubble && bubble.querySelector('mark')) bubble.innerHTML = bubble.textContent || '';
   });
 }
 
@@ -1710,135 +1394,78 @@ function navigateMsgSearch(direction) {
 }
 
 function scrollToMatch(idx) {
-  // Remove active highlight from all
   msgSearchMatches.forEach(el => el.style.outline = '');
   const target = msgSearchMatches[idx];
   if (!target) return;
-  target.style.outline = '2px solid var(--cyan)';
+  target.style.outline       = '2px solid var(--cyan)';
   target.style.outlineOffset = '3px';
   target.scrollIntoView({ block: 'center', behavior: 'smooth' });
 }
 
 function updateSearchCountLabel() {
-  if (!msgSearchMatches.length) {
-    msgSearchCountLabel.textContent = 'No results';
-    return;
-  }
-  msgSearchCountLabel.textContent = `${msgSearchCursor + 1} / ${msgSearchMatches.length}`;
+  msgSearchCountLabel.textContent = msgSearchMatches.length
+    ? `${msgSearchCursor + 1} / ${msgSearchMatches.length}`
+    : 'No results';
 }
 
-// ============================================================
-// MENU ACTION: ② Mute Notifications
-// ============================================================
-
 document.getElementById('ccmMute').addEventListener('click', () => {
-  const user = getUserById(activeUserId);
-  if (!user) return;
-
-  user.muted = !user.muted;
-
   closeChatContextMenu();
-  renderChatList(searchInput.value);
-  showGlobalToast(
-    user.muted ? `🔕 ${user.name} muted` : `🔔 ${user.name} unmuted`,
-    'success'
-  );
+  showGlobalToast('Mute coming soon', 'success');
 });
 
-// ============================================================
-// MENU ACTION: ③ Block / Unblock User
-// ============================================================
-
-document.getElementById('ccmBlock').addEventListener('click', () => {
-  const user = getUserById(activeUserId);
-  if (!user) return;
-
-  user.blocked = !user.blocked;
-
-  // If blocking, also stop any fake reply in progress
-  if (user.blocked) {
-    clearTimeout(typingTimer);
-    typingIndicator.classList.add('hidden');
-  }
-
+document.getElementById('ccmClear').addEventListener('click', async () => {
+  if (!activeChatId) return;
   closeChatContextMenu();
-
-  // Re-render the chat to show/hide the blocked overlay
-  renderMessages(user);
-  renderChatList(searchInput.value);
-
-  showGlobalToast(
-    user.blocked ? `🚫 ${user.name} blocked` : `✓ ${user.name} unblocked`,
-    user.blocked ? 'error' : 'success'
-  );
-});
-
-// ============================================================
-// MENU ACTION: ④ Clear Chat
-// ============================================================
-
-document.getElementById('ccmClear').addEventListener('click', () => {
-  const user = getUserById(activeUserId);
-  if (!user) return;
-
-  closeChatContextMenu();
-
-  // Confirm with a quick in-place toast then clear
-  showGlobalToast('Clearing chat…', 'error');
-
-  setTimeout(() => {
-    user.messages = [];
-    user.lastTime = now();
-    renderMessages(user);
-    renderChatList(searchInput.value);
+  try {
+    await messagesAPI.clearChat(activeChatId);
+    messagesArea.innerHTML = '';
     showGlobalToast('Chat cleared', 'success');
-  }, 400);
+  } catch (err) {
+    showGlobalToast('Failed to clear chat', 'error');
+  }
 });
 
-// ============================================================
-// MENU ACTION: ⑤ Delete Chat
-// ============================================================
-
-document.getElementById('ccmDelete').addEventListener('click', () => {
-  const user = getUserById(activeUserId);
-  if (!user) return;
-
+document.getElementById('ccmDelete').addEventListener('click', async () => {
+  if (!activeChatId) return;
   closeChatContextMenu();
-
-  showGlobalToast(`Deleting chat with ${user.name}…`, 'error');
-
-  setTimeout(() => {
-    // Remove user from list entirely
-    const idx = USERS.indexOf(user);
-    if (idx > -1) USERS.splice(idx, 1);
-
-    // Reset the chat view
-    activeUserId = null;
-    clearTimeout(typingTimer);
-    typingIndicator.classList.add('hidden');
-    closeMsgSearchBar();
+  try {
+    await chatsAPI.deleteChat(activeChatId);
+    allChats  = allChats.filter(c => c._id !== activeChatId);
+    activeChatId = null;
     emptyState.classList.remove('hidden');
     activeChat.classList.add('hidden');
-
-    // On mobile, show sidebar again
     sidebar.classList.remove('hidden-mobile');
     showNav();
-
-    renderChatList(searchInput.value);
+    renderChatList();
     showGlobalToast('Chat deleted', 'success');
-  }, 500);
+  } catch (err) {
+    showGlobalToast('Failed to delete chat', 'error');
+  }
 });
 
 // ============================================================
 // INIT
 // ============================================================
 
-function init() {
+async function init() {
+  const user = getMe();
+  if (!user) return; // auth not done yet — twat-auth.js handles redirect
+
+  // Connect socket
+  connectSocket(user);
+
+  // Load sidebar data
   switchSidebarTab('dms');
-  renderChatList();
-  renderGroupList();
-  newGroupBtn.style.opacity = '0.4';
+  await loadAndRenderSidebar();
+
+  newGroupBtn.style.opacity      = '0.4';
   newGroupBtn.style.pointerEvents = 'none';
 }
+
+// Called by twat-auth.js after login/register or session restore
+window.onAppUnlocked = function (user) {
+  connectSocket(user);
+  loadAndRenderSidebar();
+};
 
 init();
